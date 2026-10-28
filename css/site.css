@@ -527,7 +527,7 @@ h1 { cursor: pointer; }
 @media (max-width: 720px) { .v3-legend { left: 8px; top: 8px; padding: 6px 8px; font-size: 9.5px; gap: 1px; } .v3-legend b { font-size: 8.5px; margin-top: 3px; } .v3-legend i { width: 10px; height: 8px; } }
 /* section levels: to the left of the cut */
 .v3-lvsec { margin: 0; font-size: 11px; color: var(--ink); }
-.v3[data-scene="site"] .v3-txt { background: rgba(255,255,255,.84); padding: 6px 8px 8px; margin: 0 -8px -6px; border-radius: 8px; }          /* the backing widens the box, not the lines: the text keeps its width */
+.v3[data-scene="site"] .v3-txt { text-shadow: 0 0 3px rgba(255,255,255,.95), 0 0 8px rgba(255,255,255,.9), 0 0 14px rgba(255,255,255,.7); }          /* no box: the words haloed so they read over the map */
 
 /* plans and sections, as in architectural drawings: room names in capitals with the area in a tag, dimension figures, level marks */
 .v3-area { text-align: center; }
@@ -556,3 +556,10 @@ h1 { cursor: pointer; }
 }
 .v3.is-night .v3-help .v3-hint.flash { animation-name: v3-hint-flash-n; }
 @keyframes v3-hint-flash-n { 0%, 80% { background: #fff; color: #111; } 0% { opacity: 0; } 10% { opacity: 1; } 20%, 40%, 60% { transform: scale(1.14); } 30%, 50%, 70% { transform: scale(1); } 100% { background: transparent; color: rgba(255,255,255,.55); } }
+
+/* the diagram's key: arrows for circulation, rounded bubbles for the grounds */
+.v3-legend i { background: var(--c); }
+.v3-legend i.ar { width: 18px; height: 10px; clip-path: polygon(0 32%, 62% 32%, 62% 0, 100% 50%, 62% 100%, 62% 68%, 0 68%); }
+.v3-legend i.ar.thin { clip-path: polygon(0 40%, 66% 40%, 66% 12%, 100% 50%, 66% 88%, 66% 60%, 0 60%); }
+.v3-legend i.bub { border-radius: 5px; opacity: .8; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.14); }
+@media (max-width: 720px) { .v3-legend i.ar { width: 13px; } }

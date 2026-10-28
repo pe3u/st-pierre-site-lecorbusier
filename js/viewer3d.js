@@ -1007,9 +1007,9 @@ export async function createViewer(root, opts) {
   let mode = "play", sceneI = 0, sceneT = 0, idleT = 0, firstRun = true, lightPhase = 0, nightOn = false, enhanced = false, poiT = 99;
   let ended = false, booted = false, lightT = 0, lightFrom = 10, diagK = 0, enhGoal = 1, discGoal = 1;        // ended: the auto play has run once and rests on the intro's spin
   const ov = document.createElement("div"); ov.className = "v3-ov";
-  ov.innerHTML = '<div class="v3-txt"><div class="v3-scene"></div><p class="v3-cap"></p></div><div class="v3-count"><i></i></div>';
+  ov.innerHTML = '<div class="v3-txt"><div class="v3-scene"></div><p class="v3-cap"></p></div><div class="v3-count"><i></i><span class="v3-left"></span></div>';
   stage.appendChild(ov);
-  const sceneEl = ov.querySelector(".v3-scene"), capEl = ov.querySelector(".v3-cap"), countEl = ov.querySelector(".v3-count i");
+  const sceneEl = ov.querySelector(".v3-scene"), capEl = ov.querySelector(".v3-cap"), countEl = ov.querySelector(".v3-count i"), leftEl = ov.querySelector(".v3-left");
   const capRoom = () => Math.round((parseFloat(getComputedStyle(capEl).fontSize) || 14) * 1.2 * 3 + (parseFloat(getComputedStyle(sceneEl).fontSize) || 22) * 1.25 + 40);     // room kept free for the scene's name and its caption (three lines) under the fitted views
   const capSize = () => { capEl.style.fontSize = Math.max(11, Math.min(stage.clientHeight / 36, stage.clientWidth / 24)).toFixed(1) + "px"; };     // three lines of caption stay within a tenth of the view's height (and the texts within three lines on narrow screens)
   new ResizeObserver(capSize).observe(stage); capSize();
@@ -1246,6 +1246,7 @@ export async function createViewer(root, opts) {
     if (mode === "play") {
       if (!ended) {
         sceneT += dt; countEl.style.transform = `scaleX(${Math.max(0, 1 - sceneT / S.dur).toFixed(4)})`;
+        { let rest = Math.max(0, S.dur - sceneT); for (let j = sceneI + 1; j < SCENES.length; j++) rest += SCENES[j].dur; const sec = Math.ceil(rest), txt = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; if (leftEl.textContent !== txt) leftEl.textContent = txt; }      // the whole auto play: time left
         if (sceneT >= S.dur) { if (sceneI === SCENES.length - 1) { setEnded(true); enterScene(0); } else enterScene(sceneI + 1); }     // after the last scene: back to the intro's spin, and it stays there
       }
     } else {

@@ -563,3 +563,6 @@ h1 { cursor: pointer; }
 .v3-legend i.ar.thin { clip-path: polygon(0 40%, 66% 40%, 66% 12%, 100% 50%, 66% 88%, 66% 60%, 0 60%); }
 .v3-legend i.bub { border-radius: 5px; opacity: .8; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.14); }
 @media (max-width: 720px) { .v3-legend i.ar { width: 13px; } }
+/* the whole auto play's time left: at the right end of the countdown line */
+.v3-left { position: absolute; right: 10px; bottom: calc(100% + 5px); font-size: 11.5px; font-variant-numeric: tabular-nums; letter-spacing: .04em; color: var(--ink); text-shadow: 0 0 3px rgba(255,255,255,.95), 0 0 7px rgba(255,255,255,.85); pointer-events: none; }
+.v3.is-night .v3-left { color: #f1f1f1; text-shadow: 0 0 4px rgba(0,0,0,.7); }

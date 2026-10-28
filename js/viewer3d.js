@@ -971,14 +971,14 @@ export async function createViewer(root, opts) {
   // ---- the spatial viewer: auto play (a loop of scenes, each with its name, a typed caption and a countdown bar) and take over (any touch: the scene stays,
   // and the controls for it appear). The captions are sample texts for now.
   const SCENES = [
-    { id: "intro", name: "Intro", kind: "intro", dur: 15, text: "Designed by Le Corbusier 1960–65, completed by José Oubrerie in 2006." },
-    { id: "site", name: "Site: Site Le Corbusier", kind: "site", dur: 10, text: "Church, Maison de la Culture, stadium, pool and Unité d'habitation." },
-    { id: "light", name: "Light", kind: "light", dur: 15, text: "One day of sun on the concrete, from first light to dusk.", text2: "At dusk the lights inside glow through the openings." },
-    { id: "p14", name: "Plan +14", kind: "cut", dur: 7, text: "The nave: 429 m² beneath the concrete shell." },
-    { id: "p55", name: "Plan +5.5", kind: "cut", dur: 7, text: "Exhibition rooms: 259 m² in the square base." },
-    { id: "p2", name: "Plan +2", kind: "cut", dur: 7, text: "Lecture hall and exhibition space: 148 m²." },
-    { id: "sWE", name: "Cross section W–E", kind: "cut", dur: 7, text: "West–east: the square base below, the nave rising into the cone." },
-    { id: "sNS", name: "Cross section N–S", kind: "cut", dur: 7, text: "North–south: from a square plan to a tilted circular top, 33 m up." },
+    { id: "intro", name: "Intro", kind: "intro", dur: 15, text: "Le Corbusier's last church, designed from 1960 for Firminy-Vert. Left unfinished in 1978, completed by José Oubrerie in 2006." },
+    { id: "site", name: "Site: Site Le Corbusier", kind: "site", dur: 10, text: "The church, the Maison de la Culture, the stadium, the swimming pool and the Unité d'habitation: the largest group of Le Corbusier's works in Europe." },
+    { id: "light", name: "Light", kind: "light", dur: 15, text: "One day of sun on the concrete shell, from first light to dusk. Inside, daylight enters through the star holes, the light cannons and coloured slits.", text2: "At dusk the lights inside come on and the church glows through its openings, a lantern over the lawns of Firminy-Vert." },
+    { id: "p14", name: "Plan +14", kind: "cut", dur: 7, text: "The nave: about 429 m², open to the full height of the concrete shell, lit through the star holes of the east wall." },
+    { id: "p55", name: "Plan +5.5", kind: "cut", dur: 7, text: "Exhibition rooms: about 259 m² in the square base beneath the nave, the floors first planned for the parish rooms." },
+    { id: "p2", name: "Plan +2", kind: "cut", dur: 7, text: "Lecture hall and exhibition space: about 148 m² on the lowest floor of the square base, under the exhibition rooms." },
+    { id: "sWE", name: "Cross section W–E", kind: "cut", dur: 7, text: "West–east section: the square base with its floors below, the nave above, and the shell rising 33 m to the sloping circular roof." },
+    { id: "sNS", name: "Cross section N–S", kind: "cut", dur: 7, text: "North–south section: the walls lean as the plan turns from a square at the base to a circle at the top, cut on a slant 33 m up." },
   ];
   // floor areas measured in the model (Blender metres; the floor under each plan cut); names after the published programme
   const AREAS = { p14: [["Nave", 429, 12.66, 11.09, 6.0], ["Landing", 21, 18.61, 19.83, 7.6]], p55: [["Exhibition rooms", 259, 15.55, 7.58, 1.4]], p2: [["Lecture hall · exhibition", 148, 12.92, 9.29, -1.3]] };
@@ -989,19 +989,11 @@ export async function createViewer(root, opts) {
   const sceneEl = ov.querySelector(".v3-scene"), capEl = ov.querySelector(".v3-cap"), countEl = ov.querySelector(".v3-count i");
   const capRoom = () => Math.round((parseFloat(getComputedStyle(capEl).fontSize) || 14) * 1.2 * 3 + 36);     // room kept free for the caption (three lines) under the fitted views
   const capSize = () => { capEl.style.fontSize = Math.max(11, stage.clientHeight / 36).toFixed(1) + "px"; };     // three lines of caption stay within a tenth of the view's height
-  new ResizeObserver(capSize).observe(stage); capSize(); document.fonts?.load('16px "Redacted Script"');
-  // placeholder captions in an unreadable script, about two and a half lines long (the real texts are kept in SCENES for later)
-  const LOREM = "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure in reprehenderit voluptate velit esse cillum fugiat nulla pariatur".split(" ");
-  const measure = document.createElement("canvas").getContext("2d");
-  function glyphText(k) {
-    const f = parseFloat(capEl.style.fontSize) || 14, W = capEl.clientWidth || stage.clientWidth * 0.6; measure.font = f + 'px "Redacted Script", cursive';
-    let out = "", i = k * 7; while (measure.measureText(out).width < W * 2.5) out += (out ? " " : "") + LOREM[i++ % LOREM.length];
-    return out;
-  }
+  new ResizeObserver(capSize).observe(stage); capSize();
   let typeTimer = 0;
   function typeCap(txt) { clearInterval(typeTimer); capEl.textContent = ""; let i = 0; typeTimer = setInterval(() => { i += 1; capEl.textContent = txt.slice(0, i); if (i >= txt.length) clearInterval(typeTimer); }, Math.min(38, 2500 / txt.length)); }
   function showCap(txt) { clearInterval(typeTimer); capEl.textContent = txt; }
-  const capFor = () => { const S = SCENES[sceneI]; return glyphText(sceneI + (lightPhase && S.text2 ? 20 : 0)); };
+  const capFor = () => { const S = SCENES[sceneI]; return lightPhase && S.text2 ? S.text2 : S.text; };
   // labels in the view: the other buildings of the site (site views) and the floor areas (plans)
   const tags = [];
   const mkTag = (html, cls, p, on, dy = 0) => { const e = document.createElement("span"); e.className = cls; e.innerHTML = html; dimLayer.appendChild(e); tags.push({ e, p, on, dy }); };
@@ -1042,7 +1034,7 @@ export async function createViewer(root, opts) {
   const startSpin = () => { if (mode !== "play") return; controls.autoRotate = true; spinSun = true; spinMul = 1; spinK = 1; };
   function enterScene(i) {
     sceneI = i; sceneT = 0; lightPhase = 0; const S = SCENES[i], play = mode === "play";
-    root.dataset.scene = S.kind; sceneEl.textContent = S.name; (play ? typeCap : showCap)(glyphText(i));
+    root.dataset.scene = S.kind; sceneEl.textContent = S.name; (play ? typeCap : showCap)(S.text);
     for (const [act, k] of [["prev", -1], ["next", 1]]) { const b = q(`[data-act="${act}"]`), nm = SCENES[(i + k + SCENES.length) % SCENES.length].name; if (b) { b.querySelector("span").textContent = nm; b.title = nm; } }     // the buttons carry the names of the scenes they lead to
     controls.autoRotate = false; spinSun = false; spinMul = 1; tween = null; sunAz = 0; camAzPrev = null; userMoved = S.kind !== "intro";
     enhance(S.kind === "site" || S.kind === "light"); siteLock = S.kind === "site" || S.kind === "light";
@@ -1068,7 +1060,7 @@ export async function createViewer(root, opts) {
       if (S.kind === "light") {
         const rise = 12 - halfDay(), set = 12 + halfDay();
         if (sceneT < 9) { const u = Math.min(1, sceneT / 9), e = u * u * (3 - 2 * u); setSolar(rise - 0.4 + (set - rise + 1.0) * e); }   // night to night in 9 s, slow at dawn and dusk
-        else if (!lightPhase) { lightPhase = 1; siteLock = false; enhance(false); typeCap(glyphText(sceneI + 20)); flyHero(3000, startSpin); }   // then back down to the spin
+        else if (!lightPhase) { lightPhase = 1; siteLock = false; enhance(false); typeCap(S.text2); flyHero(3000, startSpin); }   // then back down to the spin
       }
       countEl.style.transform = `scaleX(${Math.max(0, 1 - sceneT / S.dur).toFixed(4)})`;
       if (sceneT >= S.dur) enterScene((sceneI + 1) % SCENES.length);

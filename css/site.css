@@ -428,7 +428,7 @@ footer .addr { margin-top: 0; }
 /* ===== spatial viewer: auto play / take over ===== */
 .v3-ov { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
 .v3-scene { position: absolute; left: 18px; top: 40px; font-size: 24px; font-weight: 300; letter-spacing: .01em; color: var(--ink); text-shadow: 0 0 4px rgba(255,255,255,.9), 0 0 10px rgba(255,255,255,.7); }
-.v3-cap { position: absolute; left: 18px; right: 18px; bottom: 16px; margin: 0; max-width: 54ch; min-height: 1.45em; font-size: 42px; line-height: 1.15; font-weight: 300; letter-spacing: -.01em; color: var(--ink); text-shadow: 0 0 4px rgba(255,255,255,.95), 0 0 10px rgba(255,255,255,.8); }
+.v3-cap { position: absolute; left: 18px; right: 18px; bottom: 16px; margin: 0; max-width: 54ch; min-height: 1.45em; font-family: "Redacted Script", cursive; font-size: 19px; line-height: 1.2; font-weight: 400; color: var(--ink); text-shadow: 0 0 4px rgba(255,255,255,.95), 0 0 10px rgba(255,255,255,.8); }
 .v3-count { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(0,0,0,.08); }
 .v3-count i { display: block; height: 100%; background: var(--ink); transform-origin: left center; }
 .v3.is-take .v3-count { display: none; }
@@ -452,7 +452,7 @@ footer .addr { margin-top: 0; }
 .v3.is-night .v3-poi, .v3.is-night .v3-area { color: #f1f1f1; text-shadow: 0 0 3px rgba(0,0,0,.9), 0 0 7px rgba(0,0,0,.7); } .v3.is-night .v3-poi i, .v3.is-night .v3-area i { color: rgba(255,255,255,.7); }
 @media (max-width: 720px) {
   .v3-scene { left: 14px; top: 32px; font-size: 20px; }
-  .v3-cap { left: 14px; right: 14px; bottom: 12px; font-size: 39px; }
+  .v3-cap { left: 14px; right: 14px; bottom: 12px; }
   .v3-poi { font-size: 10.5px; } .v3-area { font-size: 12px; }
   .v3[data-scene="cut"] .v3-panel .v3-dn { width: 100%; }
 }

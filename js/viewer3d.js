@@ -987,11 +987,21 @@ export async function createViewer(root, opts) {
   ov.innerHTML = '<div class="v3-scene"></div><p class="v3-cap"></p><div class="v3-count"><i></i></div>';
   stage.appendChild(ov);
   const sceneEl = ov.querySelector(".v3-scene"), capEl = ov.querySelector(".v3-cap"), countEl = ov.querySelector(".v3-count i");
-  const capRoom = () => Math.round((parseFloat(getComputedStyle(capEl).fontSize) || 14) * 1.15 * (stage.clientWidth < 600 ? 3 : 2) + 36);     // room kept free for the caption (two lines, three on phones) under the fitted views
+  const capRoom = () => Math.round((parseFloat(getComputedStyle(capEl).fontSize) || 14) * 1.2 * 3 + 36);     // room kept free for the caption (three lines) under the fitted views
+  const capSize = () => { capEl.style.fontSize = Math.max(11, stage.clientHeight / 36).toFixed(1) + "px"; };     // three lines of caption stay within a tenth of the view's height
+  new ResizeObserver(capSize).observe(stage); capSize(); document.fonts?.load('16px "Redacted Script"');
+  // placeholder captions in an unreadable script, about two and a half lines long (the real texts are kept in SCENES for later)
+  const LOREM = "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure in reprehenderit voluptate velit esse cillum fugiat nulla pariatur".split(" ");
+  const measure = document.createElement("canvas").getContext("2d");
+  function glyphText(k) {
+    const f = parseFloat(capEl.style.fontSize) || 14, W = capEl.clientWidth || stage.clientWidth * 0.6; measure.font = f + 'px "Redacted Script", cursive';
+    let out = "", i = k * 7; while (measure.measureText(out).width < W * 2.5) out += (out ? " " : "") + LOREM[i++ % LOREM.length];
+    return out;
+  }
   let typeTimer = 0;
-  function typeCap(txt) { clearInterval(typeTimer); capEl.textContent = ""; let i = 0; typeTimer = setInterval(() => { i += 1; capEl.textContent = txt.slice(0, i); if (i >= txt.length) clearInterval(typeTimer); }, 38); }
+  function typeCap(txt) { clearInterval(typeTimer); capEl.textContent = ""; let i = 0; typeTimer = setInterval(() => { i += 1; capEl.textContent = txt.slice(0, i); if (i >= txt.length) clearInterval(typeTimer); }, Math.min(38, 2500 / txt.length)); }
   function showCap(txt) { clearInterval(typeTimer); capEl.textContent = txt; }
-  const capFor = () => { const S = SCENES[sceneI]; return lightPhase && S.text2 ? S.text2 : S.text; };
+  const capFor = () => { const S = SCENES[sceneI]; return glyphText(sceneI + (lightPhase && S.text2 ? 20 : 0)); };
   // labels in the view: the other buildings of the site (site views) and the floor areas (plans)
   const tags = [];
   const mkTag = (html, cls, p, on, dy = 0) => { const e = document.createElement("span"); e.className = cls; e.innerHTML = html; dimLayer.appendChild(e); tags.push({ e, p, on, dy }); };
@@ -1032,7 +1042,7 @@ export async function createViewer(root, opts) {
   const startSpin = () => { if (mode !== "play") return; controls.autoRotate = true; spinSun = true; spinMul = 1; spinK = 1; };
   function enterScene(i) {
     sceneI = i; sceneT = 0; lightPhase = 0; const S = SCENES[i], play = mode === "play";
-    root.dataset.scene = S.kind; sceneEl.textContent = S.name; (play ? typeCap : showCap)(S.text);
+    root.dataset.scene = S.kind; sceneEl.textContent = S.name; (play ? typeCap : showCap)(glyphText(i));
     for (const [act, k] of [["prev", -1], ["next", 1]]) { const b = q(`[data-act="${act}"]`), nm = SCENES[(i + k + SCENES.length) % SCENES.length].name; if (b) { b.querySelector("span").textContent = nm; b.title = nm; } }     // the buttons carry the names of the scenes they lead to
     controls.autoRotate = false; spinSun = false; spinMul = 1; tween = null; sunAz = 0; camAzPrev = null; userMoved = S.kind !== "intro";
     enhance(S.kind === "site" || S.kind === "light"); siteLock = S.kind === "site" || S.kind === "light";
@@ -1058,7 +1068,7 @@ export async function createViewer(root, opts) {
       if (S.kind === "light") {
         const rise = 12 - halfDay(), set = 12 + halfDay();
         if (sceneT < 9) { const u = Math.min(1, sceneT / 9), e = u * u * (3 - 2 * u); setSolar(rise - 0.4 + (set - rise + 1.0) * e); }   // night to night in 9 s, slow at dawn and dusk
-        else if (!lightPhase) { lightPhase = 1; siteLock = false; enhance(false); typeCap(S.text2); flyHero(3000, startSpin); }   // then back down to the spin
+        else if (!lightPhase) { lightPhase = 1; siteLock = false; enhance(false); typeCap(glyphText(sceneI + 20)); flyHero(3000, startSpin); }   // then back down to the spin
       }
       countEl.style.transform = `scaleX(${Math.max(0, 1 - sceneT / S.dur).toFixed(4)})`;
       if (sceneT >= S.dur) enterScene((sceneI + 1) % SCENES.length);

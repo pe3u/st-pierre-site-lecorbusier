@@ -971,14 +971,14 @@ export async function createViewer(root, opts) {
   // ---- the spatial viewer: auto play (a loop of scenes, each with its name, a typed caption and a countdown bar) and take over (any touch: the scene stays,
   // and the controls for it appear). The captions are sample texts for now.
   const SCENES = [
-    { id: "intro", name: "Intro", kind: "intro", dur: 15, text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt." },
-    { id: "site", name: "Site: Site Le Corbusier", kind: "site", dur: 10, text: "Lorem ipsum dolor sit amet: ut enim ad minim veniam, quis nostrud." },
-    { id: "light", name: "Light", kind: "light", dur: 15, text: "Lorem ipsum, from sunrise to sunset.", text2: "Duis aute irure dolor in reprehenderit in voluptate." },
-    { id: "p14", name: "Plan +14", kind: "cut", dur: 7, text: "Lorem ipsum dolor sit amet, consectetur." },
-    { id: "p55", name: "Plan +5.5", kind: "cut", dur: 7, text: "Sed do eiusmod tempor incididunt ut labore." },
-    { id: "p2", name: "Plan +2", kind: "cut", dur: 7, text: "Ut enim ad minim veniam, quis nostrud." },
-    { id: "sWE", name: "Cross section W–E", kind: "cut", dur: 7, text: "Excepteur sint occaecat cupidatat non proident." },
-    { id: "sNS", name: "Cross section N–S", kind: "cut", dur: 7, text: "Sunt in culpa qui officia deserunt mollit." },
+    { id: "intro", name: "Intro", kind: "intro", dur: 15, text: "Designed by Le Corbusier 1960–65, completed by José Oubrerie in 2006." },
+    { id: "site", name: "Site: Site Le Corbusier", kind: "site", dur: 10, text: "Church, Maison de la Culture, stadium, pool and Unité d'habitation." },
+    { id: "light", name: "Light", kind: "light", dur: 15, text: "One day of sun on the concrete, from first light to dusk.", text2: "At dusk the lights inside glow through the openings." },
+    { id: "p14", name: "Plan +14", kind: "cut", dur: 7, text: "The nave: 429 m² beneath the concrete shell." },
+    { id: "p55", name: "Plan +5.5", kind: "cut", dur: 7, text: "Exhibition rooms: 259 m² in the square base." },
+    { id: "p2", name: "Plan +2", kind: "cut", dur: 7, text: "Lecture hall and exhibition space: 148 m²." },
+    { id: "sWE", name: "Cross section W–E", kind: "cut", dur: 7, text: "West–east: the square base below, the nave rising into the cone." },
+    { id: "sNS", name: "Cross section N–S", kind: "cut", dur: 7, text: "North–south: from a square plan to a tilted circular top, 33 m up." },
   ];
   // floor areas measured in the model (Blender metres; the floor under each plan cut); names after the published programme
   const AREAS = { p14: [["Nave", 429, 12.66, 11.09, 6.0], ["Landing", 21, 18.61, 19.83, 7.6]], p55: [["Exhibition rooms", 259, 15.55, 7.58, 1.4]], p2: [["Lecture hall · exhibition", 148, 12.92, 9.29, -1.3]] };
@@ -987,6 +987,7 @@ export async function createViewer(root, opts) {
   ov.innerHTML = '<div class="v3-scene"></div><p class="v3-cap"></p><div class="v3-count"><i></i></div>';
   stage.appendChild(ov);
   const sceneEl = ov.querySelector(".v3-scene"), capEl = ov.querySelector(".v3-cap"), countEl = ov.querySelector(".v3-count i");
+  const capRoom = () => Math.round((parseFloat(getComputedStyle(capEl).fontSize) || 14) * 1.15 * (stage.clientWidth < 600 ? 3 : 2) + 36);     // room kept free for the caption (two lines, three on phones) under the fitted views
   let typeTimer = 0;
   function typeCap(txt) { clearInterval(typeTimer); capEl.textContent = ""; let i = 0; typeTimer = setInterval(() => { i += 1; capEl.textContent = txt.slice(0, i); if (i >= txt.length) clearInterval(typeTimer); }, 38); }
   function showCap(txt) { clearInterval(typeTimer); capEl.textContent = txt; }
@@ -1007,14 +1008,14 @@ export async function createViewer(root, opts) {
   function setSolar(h) { solar = h; sunIn.value = h; sunOut.textContent = fmt(h) + " solar"; applySun(); }
   const nightHour = () => Math.min(20.5, 12 + halfDay() + 0.6);
   function siteView() {                                     // straight down on the compass, north up; the ring fitted between the title and the caption
-    const w = stage.clientWidth, h = stage.clientHeight, top = 64, bottom = 100;
+    const w = stage.clientWidth, h = stage.clientHeight, top = 64, bottom = capRoom();
     const avail = Math.max(120, Math.min(w - 24, h - top - bottom)), t = Math.tan(THREE.MathUtils.degToRad(persp.fov / 2));
     const D = (SKY_R + 18) * h / (avail * t), dy = ((bottom - top) / 2) * (2 * D * t / h);          // the ring sits in the free band: the camera aims a little south of it
     const T = new THREE.Vector3(SKY_C.x + dy, 0, SKY_C.z);
     return { p: T.clone().add(new THREE.Vector3(D * Math.sin(0.03), D * Math.cos(0.03), 0)), t: T };
   }
   function secView() {                                      // cross sections: one-point perspective, the camera square to the cut, the section fitted between the title and the caption
-    const w = stage.clientWidth, h = stage.clientHeight, top = 64, bottom = 100, t = Math.tan(THREE.MathUtils.degToRad(fovWant / 2));
+    const w = stage.clientWidth, h = stage.clientHeight, top = 64, bottom = capRoom(), t = Math.tan(THREE.MathUtils.degToRad(fovWant / 2));
     const side = new THREE.Vector3(-cutDir.z, 0, cutDir.x), c = new THREE.Vector3(0.15, (groundY + 33.3) / 2, -1.65), sz = new THREE.Vector3(25.3, 33.3 - groundY, 25.3);     // the church: its 25.3 m square and its height
     const W = Math.abs(side.x) * sz.x + Math.abs(side.z) * sz.z + 4, H = sz.y + 4;
     const D = Math.max(H * h / (2 * t * Math.max(120, h - top - bottom)), W * h / (2 * t * Math.max(120, w - 24))), dy = ((bottom - top) / 2) * (2 * D * t / h);

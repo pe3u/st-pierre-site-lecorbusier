@@ -273,11 +273,6 @@ html.v3-lock, html.v3-lock body { overflow: hidden; }
 }
 @media (max-width: 380px) { .v3-bar button { font-size: 9.5px; } .keyfacts { gap: 6px 16px; } }
 
-/* light snapping: sections settle at the top of the screen when a scroll ends close to them */
-html { scroll-snap-type: y proximity; }
-section, footer { scroll-snap-align: start; }
-html.v3-lock { scroll-snap-type: none; }
-@media (prefers-reduced-motion: reduce) { html { scroll-snap-type: none; } }
 /* parallax frames */
 .px { display: block; overflow: hidden; background: var(--wash); }
 .px img { will-change: transform; transform: scale(1.12); }
@@ -289,9 +284,8 @@ html.v3-lock { scroll-snap-type: none; }
 .v3.is-night .v3-north { background: rgba(10,12,19,.6); color: rgba(255,255,255,.8); border-color: rgba(255,255,255,.18); }
 @media (max-width: 900px) { .v3-north { top: 54px; right: 10px; width: 44px; height: 44px; } }
 
-/* small screens: the viewer block (3D view + controls) is sized to the screen and snaps under the header, so it is ready to explore as soon as you swipe to it */
+/* small screens: the viewer block (3D view + controls) is sized to the screen */
 @media (max-width: 900px) {
-  .v3 { scroll-snap-align: start; }                          /* (the header offset is already in html scroll-padding-top) */
   .v3-stage { height: calc(100vh - 52px - 160px); height: calc(100svh - 52px - 160px); min-height: 300px; max-height: none; aspect-ratio: auto; }
   .v3.is-fs .v3-stage { height: auto; }
 }
@@ -487,3 +481,6 @@ footer .addr { margin-top: 0; }
 .v3.is-play .v3-facts { top: 60px; }
 @keyframes v3-pulse { 50% { box-shadow: 0 4px 16px rgba(0,0,0,.18), 0 0 0 6px rgba(0,0,0,.06); } }
 @media (max-width: 900px) { .v3-explore { right: 10px; top: 10px; padding: 8px 14px; font-size: 12px; } }
+
+/* every screen: the viewer (3D view, and the controls when they show) fits the window under the header; the height is set by viewer3d.js */
+.v3:not(.is-fs):not(:fullscreen) .v3-stage { height: var(--v3h, 70vh) !important; min-height: 0 !important; max-height: none !important; aspect-ratio: auto !important; }

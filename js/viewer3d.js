@@ -796,6 +796,12 @@ export async function createViewer(root, opts) {
     const vh = 66, vw = vh * (w / h); ortho.left = -vw / 2; ortho.right = vw / 2; ortho.top = vh / 2; ortho.bottom = -vh / 2; ortho.updateProjectionMatrix();
     if (onResize) onResize();
   }
+  function fitPage() {                                      // the viewer fits the first screen, from its top to the bottom of the window; the controls, when they sit below the view, fit in too
+    const top = Math.max(document.querySelector("header.top")?.offsetHeight || 0, stage.getBoundingClientRect().top + scrollY), panel = root.querySelector(".v3-panel");     // the whole viewer on the first screen, under the page title
+    const below = panel && panel.offsetHeight > 0 && getComputedStyle(root).display !== "grid";
+    root.style.setProperty("--v3h", Math.max(220, window.innerHeight - top - (below ? panel.offsetHeight : 0) - 10) + "px");
+  }
+  addEventListener("resize", fitPage); new ResizeObserver(fitPage).observe(root.querySelector(".v3-panel")); fitPage();
   new ResizeObserver(resize).observe(stage); resize();
 
   // ---- VR (WebXR, Meta Quest 3): the page button enters / leaves an immersive session. In VR the post-processing chain is bypassed (direct render with the
@@ -1072,7 +1078,7 @@ export async function createViewer(root, opts) {
   function setMode(m) {
     mode = m; root.classList.toggle("is-play", m === "play"); root.classList.toggle("is-take", m === "take"); if (m === "take") root.classList.add("was-take");
     const pb = q('[data-act="play"]'); if (pb) { pb.querySelector("svg").innerHTML = m === "play" ? PAUSE_ICON : PLAY_ICON; pb.querySelector("span").textContent = m === "play" ? "Pause" : "Play"; pb.title = m === "play" ? "Pause" : "Auto play"; }
-    idleT = 0; setTouch(); setHint(); dirty = true;
+    idleT = 0; setTouch(); setHint(); fitPage(); dirty = true;
   }
   function takeOver() {
     idleT = 0;

@@ -167,7 +167,9 @@ export async function createViewer(root, opts) {
   // ---- the surroundings, 200 m round the church (OpenStreetMap footprints, roads and green areas; heights and roof types from IGN BD TOPO): one flat colour per kind,
   // white buildings with their real height and roof type, level with the terrain (z = -2.9) (no fade)
   const CTX_COL = { site: [0x7f9c58, -7], base: [0x7f9c58, -6], green: [0x7f9c58, -5], forest: [0x7f9c58, -5], sport: [0x7f9c58, -4], pitch: [0x7f9c58, -4], parking: [0xffffff, -4], sidewalk: [0xffffff, -3], road: [0xb6b6b7, -2] };
-  const DIAG = { road: 0x8d7b88, sidewalk: 0xe3a92b, parking: 0xb3aed6, sport: 0xeea2b6, pitch: 0xeea2b6, b_lc: 0xc9483b, b_pub: 0xee9a4d, b_res: 0xb197e6, b_com: 0xf2cf5b, b_off: 0xf2cf5b };
+  const DIAG = { road: 0x263047, sidewalk: 0xdd4a3b, parking: 0x263047, sport: 0x3893d2, pitch: 0x3893d2, b_lc: 0xdd4a3b, b_pub: 0x3893d2, b_res: 0xd3d7dc, b_com: 0xf2a99c, b_off: 0xf2a99c };
+  // the colour to give the diagram's parts so they show as that colour on the page, through the exposure and the tone curve of the final pass (unlit; the buildings' glow)
+  const shown = (hex) => { const c = new THREE.Color(hex), k = EXPOSURE * 0.6, inv = (t) => { const a = 2.51 - 2.43 * t, b = 0.03 - 0.59 * t; return (-b + Math.sqrt(b * b + 0.56 * a * t)) / (2 * a) / k; }; return c.setRGB(inv(c.r), inv(c.g), inv(c.b), THREE.LinearSRGBColorSpace); };
   const diagMats = []; let ctxScene = null;                         // the site diagram: the materials it recolours, with their own colours; ctxScene: the surroundings, once loaded (the site arrows measure on them)
   const ctxLit = [];                                                  // the surroundings' white materials: their glow follows the sun, so the buildings darken towards evening and night
   const siteMeshes = [], siteRoot = new THREE.Group(); scene.add(siteRoot);
@@ -190,9 +192,9 @@ export async function createViewer(root, opts) {
         sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vCW; uniform vec2 uC0;");
       };
       m.customProgramCacheKey = () => "ctx200c";
-      if (!bld) { const k = def[1] + 7; m.polygonOffset = true; m.polygonOffsetFactor = -k; m.polygonOffsetUnits = -2 * k; }      // the flat layers lie almost level: each one is drawn a step nearer than the one under it, so they no longer flicker from afar
+      if (!bld) { const k = def[1] + 7; m.polygonOffset = true; m.polygonOffsetFactor = -k; m.polygonOffsetUnits = -2 * k; } else { m.polygonOffset = true; m.polygonOffsetFactor = 1; m.polygonOffsetUnits = 2; }      // the flat layers lie almost level: each one is drawn a step nearer than the one under it, so they no longer flicker from afar
       o.material = m; o.renderOrder = def[1]; o.frustumCulled = false; o.castShadow = false; o.receiveShadow = false;
-      if (DIAG[key] && key !== "road" && key !== "sidewalk") diagMats.push({ m, c0: m.color.clone(), e0: m.emissive.clone(), lit: m.emissiveIntensity > 0 && m.emissive.r > 0, tint: new THREE.Color(bld ? DIAG[key] : 0x7f9c58) });      // grounds turn to lawn: their bubbles carry the colour
+      if (DIAG[key] && key !== "road" && key !== "sidewalk") diagMats.push({ m, c0: m.color.clone(), e0: m.emissive.clone(), lit: m.emissiveIntensity > 0 && m.emissive.r > 0, tint: bld ? new THREE.Color(DIAG[key]).multiplyScalar(0.25) : new THREE.Color(0x7f9c58), et: bld ? shown(DIAG[key]).multiplyScalar(1 / 0.85) : null });      // buildings: flat colour, mostly from their glow; grounds turn to lawn: their bubbles carry the colour
     });
     g.scene.updateMatrixWorld(true); for (const m of siteMeshes) siteRoot.attach(m);
     ctxScene = g.scene;
@@ -1105,10 +1107,19 @@ export async function createViewer(root, opts) {
     }
   }
   function enhance(on) { const site = SCENES[sceneI].kind === "site"; enhGoal = on && site ? 0.4 : 1; discGoal = on ? (site ? 1.6 : 2.6) : 1; enhanced = on; arcBold.visible = on; arc.visible = !on; if (on && site) poiRoot.visible = true; applySun(); dirty = true; }     // the sun's size and strength ease to the new goal (director); the arrows: site view only
-  // the site diagram: roads, footpaths and parking (circulation, by kind of traffic) and the buildings and grounds by function, in colour over the surroundings
-  const LEG = [["Circulation"], ["road", "Roads", "ar"], ["sidewalk", "Pedestrians", "ar thin"], ["parking", "Parkings", "bub"], ["Functions"], ["b_lc", "Le Corbusier"], ["b_pub", "Public and sport buildings"], ["b_res", "Housing"], ["b_com", "Shops and offices"], ["sport", "Sport grounds", "bub"]];
-  // circulation as thick arrows along the roads and footpaths, parking and sport grounds as rounded bubbles (OpenStreetMap, prepared by scripts/make_circ.cjs), draped on the ground
-  const circRoot = new THREE.Group(); circRoot.visible = false; scene.add(circRoot); const circMats = []; let circState = 0;
+  // the site diagram, drawn like an urban analysis plan: cars as dashed navy lines (open chevrons where the traffic carries on beyond the map, or the way a one-way street runs),
+  // pedestrians as red ladder arrows, parking and sport grounds as bubbles (a solid fill, hatching that runs on past the edge, a dark contour), every building outlined;
+  // OpenStreetMap, prepared by scripts/make_circ.cjs, all draped on the ground
+  const NAVY = DIAG.road, RED = DIAG.sidewalk, BUB = { parking: [NAVY, 0xf2a093], sport: [DIAG.sport, RED], pitch: [DIAG.sport, RED] };          // bubbles: fill, hatching
+  const hx = (c) => "#" + c.toString(16).padStart(6, "0");
+  const SW = {                                                // the key's samples, drawn like the map
+    road: `<svg viewBox="0 0 26 12"><path d="M1 6h15" stroke="${hx(NAVY)}" stroke-width="2.6" stroke-dasharray="4.5 2.5" fill="none"/><path d="M17.5 1.8 23 6l-5.5 4.2" stroke="${hx(NAVY)}" stroke-width="2.3" fill="none"/></svg>`,
+    ped: `<svg viewBox="0 0 26 12"><path d="M7.5 6h11" stroke="${hx(RED)}" stroke-width="6" stroke-dasharray="1.2 1.3" fill="none"/><path d="M1 6l6.5-4.8v9.6zM25 6l-6.5-4.8v9.6z" fill="${hx(RED)}"/></svg>`,
+    hat: ([f, h]) => `<i class="hat" style="--c:${hx(f)};--h:${hx(h)}"></i>`,
+    fn: (f) => `<i class="fn" style="--c:${hx(f)}"></i>`,
+  };
+  const LEG = [["Circulation"], [SW.road, "Roads"], [SW.ped, "Pedestrians"], [SW.hat(BUB.parking), "Parkings"], ["Functions"], [SW.fn(DIAG.b_lc), "Le Corbusier"], [SW.fn(DIAG.b_pub), "Public and sport buildings"], [SW.fn(DIAG.b_res), "Housing"], [SW.fn(DIAG.b_com), "Shops and offices"], [SW.hat(BUB.sport), "Sport grounds"]];
+  const circRoot = new THREE.Group(); circRoot.visible = false; scene.add(circRoot); const circMats = [], circLines = []; let circState = 0;
   function buildCirc() {
     if (circState || !ctxScene || !contextUrl) return; circState = 1;
     fetch(contextUrl.replace(/[^/]+$/, "circ.json")).then((r) => r.json()).then((c) => {
@@ -1116,52 +1127,101 @@ export async function createViewer(root, opts) {
       const rc = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0), o3 = new THREE.Vector3(), M = model.position;
       const Y = (x, z) => { o3.set(x, 30, z); rc.set(o3, down); const h = rc.intersectObjects(grounds, false)[0]; return Math.max(h ? h.point.y : -2.9, -2.9) + 0.35; };
       const V = (p) => [p[0] + M.x, -p[1] + M.z];                      // Blender plan (x, y) to the viewer's (x, z)
-      const mk = (col, op) => { const m = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -16 }); m.userData.op = op; circMats.push(m); return m; };
+      const P3 = (x, z) => [x, Y(x, z), z];
+      const mk = (col, op) => { const m = new THREE.MeshBasicMaterial({ color: shown(col), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -16 }); m.userData.op = op; circMats.push(m); return m; };
+      const hatch = (col, op, hc, only) => {                  // hatching in world space, at 45 degrees, every 5 m; only: the hatching alone, the ground showing between
+        const m = mk(only ? hc : col, op);
+        m.onBeforeCompile = (sh) => {
+          sh.uniforms.uHc = { value: shown(hc) };
+          sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec2 vHW;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvHW = (modelMatrix * vec4(position, 1.0)).xz;");
+          sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vHW; uniform vec3 uHc;").replace("#include <color_fragment>", `#include <color_fragment>
+  float hu = dot(vHW, vec2(0.7071, 0.7071)) / 5.0, hw = fwidth(hu);
+  float hs = mix(1.0 - smoothstep(0.16 - hw, 0.16 + hw, abs(fract(hu) - 0.5)), 0.32, smoothstep(0.25, 0.5, hw));      // the stripes, evened out to their mean where they get too fine to draw
+  ${only ? "diffuseColor.a *= hs;" : "diffuseColor.rgb = mix(diffuseColor.rgb, uHc, hs);"}`);
+        };
+        m.customProgramCacheKey = () => "hatch" + (only ? "o" : "f");
+        return m;
+      };
       const add = (pos, mat, ord) => { const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); const ms = new THREE.Mesh(g, mat); ms.renderOrder = ord; ms.frustumCulled = false; circRoot.add(ms); };
-      // bubbles: the grounds' outlines with their corners rounded, a soft fill and a firmer rim
-      for (const a of c.area) {
-        const pts = a.p.map(V), g = new THREE.ShapeGeometry(new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(x, z)))), p = g.attributes.position, pos = [], yc = new Map();
+      const quad = (pos, p0, p1, p2, p3) => pos.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
+      // bubbles: a solid fill with its hatching, the hatching again a little off (so it runs past the edge), a dark contour; parking marked P
+      const contourM = mk(NAVY, 1);
+      for (const ar of c.area) {
+        const [fc, hc] = BUB[ar.k], pts = ar.p.map(V), yc = new Map();
         const yAt = (x, z) => { const k = x.toFixed(2) + "," + z.toFixed(2); if (!yc.has(k)) yc.set(k, Y(x, z) - 0.15); return yc.get(k); };
-        for (const i of g.index.array) { const x = p.getX(i), z = p.getY(i); pos.push(x, yAt(x, z), z); }
-        add(pos, mk(DIAG[a.k], 0.72), 19);
+        const flat = (q, mat, ord) => { const g = new THREE.ShapeGeometry(new THREE.Shape(q.map(([x, z]) => new THREE.Vector2(x, z)))), p = g.attributes.position, pos = []; for (const i of g.index.array) { const x = p.getX(i), z = p.getY(i); pos.push(x, yAt(x, z), z); } add(pos, mat, ord); };
+        flat(pts, hatch(fc, 0.92, hc, false), 18);
+        flat(pts.map(([x, z]) => [x - 2.6, z + 2.6]), hatch(fc, 1, hc, true), 19);
         const rim = [];
         for (let i = 0; i < pts.length; i++) {
-          const [x0, z0] = pts[i], [x1, z1] = pts[(i + 1) % pts.length], l = Math.hypot(x1 - x0, z1 - z0) || 1, nx = -(z1 - z0) / l * 0.35, nz = (x1 - x0) / l * 0.35, y0 = yAt(x0, z0) + 0.05, y1 = yAt(x1, z1) + 0.05;
-          rim.push(x0 - nx, y0, z0 - nz, x1 - nx, y1, z1 - nz, x1 + nx, y1, z1 + nz, x0 - nx, y0, z0 - nz, x1 + nx, y1, z1 + nz, x0 + nx, y0, z0 + nz);
+          const [x0, z0] = pts[i], [x1, z1] = pts[(i + 1) % pts.length], l = Math.hypot(x1 - x0, z1 - z0) || 1, nx = -(z1 - z0) / l * 0.45, nz = (x1 - x0) / l * 0.45, y0 = yAt(x0, z0) + 0.05, y1 = yAt(x1, z1) + 0.05;
+          quad(rim, [x0 - nx, y0, z0 - nz], [x1 - nx, y1, z1 - nz], [x1 + nx, y1, z1 + nz], [x0 + nx, y0, z0 + nz]);
         }
-        add(rim, mk(new THREE.Color(DIAG[a.k]).multiplyScalar(0.8), 1), 19);
+        add(rim, contourM, 20);
+        if (ar.k === "parking") { let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x / pts.length; cz += z / pts.length; } mkTag("P", "v3-pk", new THREE.Vector3(cx, Y(cx, cz) + 0.5, cz), () => SCENES[sceneI].kind === "site" && diagK > 0.6); }
       }
-      // arrows: a band along the centre line and a head at the end of the flow (at both ends where the traffic runs both ways); roads wider than footpaths, main roads wider still
-      const arrow = (line, w, both, mat) => {
+      // a centre line, resampled every 2 m: where it is, and which way it runs, at any distance along it
+      const path = (line) => {
         const P = [V(line[0])];
-        for (let i = 1; i < line.length; i++) { const a = P[P.length - 1], b = V(line[i]), n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2.5); for (let j = 1; j <= n; j++) P.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); }
+        for (let i = 1; i < line.length; i++) { const a = P[P.length - 1], b = V(line[i]), n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2); for (let j = 1; j <= n; j++) P.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); }
         const S = [0]; for (let i = 1; i < P.length; i++) S.push(S[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
-        const L = S[S.length - 1], hl = w * 1.6, hw = w; if (L < hl * 2.5) return;
         const at = (s) => {
           let i = 1; while (i < S.length - 1 && S[i] < s) i++;
-          const t = (s - S[i - 1]) / ((S[i] - S[i - 1]) || 1), dx = P[i][0] - P[i - 1][0], dz = P[i][1] - P[i - 1][1], l = Math.hypot(dx, dz) || 1, x = P[i - 1][0] + dx * t, z = P[i - 1][1] + dz * t;
-          return { x, z, y: Y(x, z), nx: -dz / l, nz: dx / l };
+          const t = Math.max(0, Math.min(1, (s - S[i - 1]) / ((S[i] - S[i - 1]) || 1))), dx = P[i][0] - P[i - 1][0], dz = P[i][1] - P[i - 1][1], l = Math.hypot(dx, dz) || 1;
+          return { x: P[i - 1][0] + dx * t, z: P[i - 1][1] + dz * t, dx: dx / l, dz: dz / l };
         };
-        const s0 = both ? hl : 0, s1 = L - hl, pos = [], half = w / 2; let prev = null;
-        for (let s = s0; ; s = Math.min(s1, s + 2.5)) {
-          const q = at(s), cur = [q.x - q.nx * half, q.y, q.z - q.nz * half, q.x + q.nx * half, q.y, q.z + q.nz * half];
-          if (prev) pos.push(...prev.slice(0, 3), ...cur.slice(0, 3), ...cur.slice(3), ...prev.slice(0, 3), ...cur.slice(3), ...prev.slice(3));
+        return { L: S[S.length - 1], at };
+      };
+      const band = (pos, at, s0, s1, h) => {                   // a strip of half width h from s0 to s1 along the line
+        let prev = null;
+        for (let s = s0; ; s = Math.min(s1, s + 2)) {
+          const q = at(s), y = Y(q.x, q.z), cur = [[q.x - q.dz * h, y, q.z + q.dx * h], [q.x + q.dz * h, y, q.z - q.dx * h]];
+          if (prev) quad(pos, prev[0], cur[0], cur[1], prev[1]);
           prev = cur; if (s >= s1) break;
         }
-        const head = (sb, st) => { const b = at(sb), t = at(st); pos.push(b.x - b.nx * hw, b.y, b.z - b.nz * hw, t.x, t.y, t.z, b.x + b.nx * hw, b.y, b.z + b.nz * hw); };
-        head(s1, L); if (both) head(s0, 0);
-        add(pos, mat, 20);
       };
-      const roadM = mk(DIAG.road, 1), pathM = mk(DIAG.sidewalk, 1);
-      for (const r of c.road) arrow(r.p, r.w >= 2 ? 6 : 4, !r.o, roadM);
-      for (const r of c.path) arrow(r.p, r.w >= 2 ? 3.4 : 2.6, true, pathM);
+      const chevron = (pos, q, sgn, arm, h) => {               // an open head at q, pointing along the line (sgn 1) or back (-1): two strokes and a mitred tip
+        const dx = q.dx * sgn, dz = q.dz * sgn, cs = Math.cos(0.72), sn = Math.sin(0.72), out = [];
+        for (const k of [1, -1]) {
+          const ax = -dx * cs - k * dz * sn, az = -dz * cs + k * dx * sn, px = -az * h, pz = ax * h, ex = q.x + ax * arm, ez = q.z + az * arm;
+          quad(pos, P3(q.x + px, q.z + pz), P3(ex + px, ez + pz), P3(ex - px, ez - pz), P3(q.x - px, q.z - pz));
+          out.push(px * dx + pz * dz > 0 ? [q.x + px, q.z + pz] : [q.x - px, q.z - pz]);
+        }
+        const tip = P3(q.x, q.z), m = P3(q.x + dx * h / sn, q.z + dz * h / sn);
+        pos.push(...tip, ...P3(...out[0]), ...m, ...tip, ...m, ...P3(...out[1]));
+      };
+      const roadM = mk(NAVY, 1), pedM = mk(RED, 1);
+      for (const r of c.road) {
+        const { L, at } = path(r.p), main = r.w >= 2, h = main ? 1.3 : 0.8, dash = main ? 8 : 5, gap = main ? 5 : 4, arm = main ? 9 : 6, pos = [];
+        if (L < 2 * arm) continue;
+        const head0 = !r.o && r.e[0], head1 = r.o || r.e[1];       // heads where the traffic carries on beyond the map; on a one-way street, the way it runs
+        const s0 = head0 ? 2 * h : 0, s1 = head1 ? L - 2 * h : L;
+        for (let d = s0; d < s1; d += dash + gap) band(pos, at, d, Math.min(d + dash, s1), h);
+        if (head1) chevron(pos, at(L), 1, arm, h);
+        if (head0) chevron(pos, at(0), -1, arm, h);
+        add(pos, roadM, 21);
+      }
+      for (const r of c.path) {                                 // rungs across the line, a solid head at each end
+        const { L, at } = path(r.p), hl = 5.5, hw = 3.4, pos = [];
+        if (L < 2 * hl + 5) continue;
+        for (let d = hl + 1; d < L - hl - 0.5; d += 2.6) {
+          const q = at(d), y = Y(q.x, q.z), ax = q.dx * 0.5, az = q.dz * 0.5, bx = -q.dz * 2.1, bz = q.dx * 2.1;
+          quad(pos, [q.x - ax - bx, y, q.z - az - bz], [q.x + ax - bx, y, q.z + az - bz], [q.x + ax + bx, y, q.z + az + bz], [q.x - ax + bx, y, q.z - az + bz]);
+        }
+        for (const [sb, st] of [[L - hl, L], [hl, 0]]) { const bq = at(sb), t = at(st); pos.push(...P3(bq.x - bq.dz * hw, bq.z + bq.dx * hw), ...P3(t.x, t.z), ...P3(bq.x + bq.dz * hw, bq.z - bq.dx * hw)); }
+        add(pos, pedM, 22);
+      }
+      // every building outlined in navy, like the drawn contours
+      const edgeM = new THREE.LineBasicMaterial({ color: shown(NAVY), transparent: true, opacity: 0 }); edgeM.userData.op = 0.85; circMats.push(edgeM);
+      const bl = []; ctxScene.traverse((o) => { if (o.isMesh && /^ctx_b_/.test(o.name)) bl.push(o); });
+      for (const o of bl) { const ln = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 30), edgeM); ln.frustumCulled = false; ln.visible = false; o.add(ln); circLines.push(ln); }
       circState = 2; applyDiag(diagK);
     }).catch((e) => { console.warn("circulation not loaded", e); });
   }
   const legend = document.createElement("div"); legend.className = "v3-legend"; legend.style.display = "none";
-  legend.innerHTML = LEG.map(([k, t, c]) => (t ? `<span><i class="${c || ""}" style="--c:#${DIAG[k].toString(16).padStart(6, "0")}"></i>${t}</span>` : `<b>${k}</b>`)).join("");
+  legend.innerHTML = LEG.map(([k, t]) => (t ? `<span>${k}${t}</span>` : `<b>${k}</b>`)).join("");
   stage.appendChild(legend);
-  function applyDiag(k) { const e = k * k * (3 - 2 * k); if (k > 0) buildCirc(); circRoot.visible = e > 0.01; for (const m of circMats) m.opacity = m.userData.op * e; for (const d of diagMats) { d.m.color.copy(d.c0).lerp(d.tint, e); if (d.lit) d.m.emissive.copy(d.e0).lerp(d.tint, e); } legend.style.opacity = e.toFixed(3); legend.style.display = e > 0.01 ? "" : "none"; dirty = true; }
+  function applyDiag(k) { const e = k * k * (3 - 2 * k); if (k > 0) buildCirc(); circRoot.visible = e > 0.01; for (const l of circLines) l.visible = e > 0.01; for (const m of circMats) m.opacity = m.userData.op * e; for (const d of diagMats) { d.m.color.copy(d.c0).lerp(d.tint, e); if (d.lit) d.m.emissive.copy(d.e0).lerp(d.et || d.tint, e); } legend.style.opacity = e.toFixed(3); legend.style.display = e > 0.01 ? "" : "none"; dirty = true; }
   function setEnded(v) { ended = v; root.classList.toggle("is-ended", v); }
   let poiFit = false;
   function fitPois() {                                      // the arrows reach the pool's nearest edge, measured on the surroundings once they are in

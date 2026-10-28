@@ -60,3 +60,6 @@ document.querySelectorAll("[data-full]").forEach((fig) => {
 });
 const closeLb = () => { lb.classList.remove("show"); document.body.classList.remove("noscroll"); setTimeout(() => (lbImg.src = ""), 250); };
 lb.addEventListener("click", closeLb); window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLb(); });
+
+// the page's title reloads the page
+document.querySelector("h1")?.addEventListener("click", () => location.reload());

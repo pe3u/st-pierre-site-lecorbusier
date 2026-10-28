@@ -167,6 +167,8 @@ export async function createViewer(root, opts) {
   // ---- the surroundings, 200 m round the church (OpenStreetMap footprints, roads and green areas; heights and roof types from IGN BD TOPO): one flat colour per kind,
   // white buildings with their real height and roof type, level with the terrain (z = -2.9) (no fade)
   const CTX_COL = { site: [0x7f9c58, -7], base: [0x7f9c58, -6], green: [0x7f9c58, -5], forest: [0x7f9c58, -5], sport: [0x7f9c58, -4], pitch: [0x7f9c58, -4], parking: [0xffffff, -4], sidewalk: [0xffffff, -3], road: [0xb6b6b7, -2] };
+  const DIAG = { road: 0x2f3338, sidewalk: 0xe3a92b, parking: 0xb3aed6, sport: 0x6f9fe0, pitch: 0x6f9fe0, b_lc: 0xc9483b, b_pub: 0xee9a4d, b_res: 0xb197e6, b_com: 0xf2cf5b, b_off: 0xf2cf5b };
+  const diagMats = [];                                                // the site diagram: the materials it recolours, with their own colours
   const ctxLit = [];                                                  // the surroundings' white materials: their glow follows the sun, so the buildings darken towards evening and night
   const siteMeshes = [], siteRoot = new THREE.Group(); scene.add(siteRoot);
   const ctxRoot = new THREE.Group(); ctxRoot.visible = true; scene.add(ctxRoot);
@@ -190,6 +192,7 @@ export async function createViewer(root, opts) {
       m.customProgramCacheKey = () => "ctx200c";
       if (!bld) { const k = def[1] + 7; m.polygonOffset = true; m.polygonOffsetFactor = -k; m.polygonOffsetUnits = -2 * k; }      // the flat layers lie almost level: each one is drawn a step nearer than the one under it, so they no longer flicker from afar
       o.material = m; o.renderOrder = def[1]; o.frustumCulled = false; o.castShadow = false; o.receiveShadow = false;
+      if (DIAG[key]) diagMats.push({ m, c0: m.color.clone(), e0: m.emissive.clone(), lit: m.emissiveIntensity > 0 && m.emissive.r > 0, tint: new THREE.Color(DIAG[key]) });
     });
     g.scene.updateMatrixWorld(true); for (const m of siteMeshes) siteRoot.attach(m);
     ctxRoot.add(g.scene); applySun();
@@ -569,7 +572,7 @@ export async function createViewer(root, opts) {
     const mat = new THREE.MeshBasicMaterial({ color: 0xc9483b, side: THREE.DoubleSide, depthTest: false });          // the red of the north mark: legible by day and by night
     for (const p of POIS) {
       const dist = Math.hypot(p.n, p.e), dx = -p.n / dist, dz = -p.e / dist;          // viewer: north = -x, east = -z
-      p.dist = dist; const a = dist < 95 ? 26 : 86, b = dist < 95 ? dist - 9 : SKY_R + 8;    // inside the ring: up to the building; further away: out across the ring
+      p.dist = dist; const a = 26, b = SKY_R + 8;              // all the arrows the same length: from by the church out across the ring
       const nx = -dz, nz = dx, w = 0.9, hl = 7, hw = 3.4;
       const P = (s, o) => new THREE.Vector3(dx * s + nx * o, 0, dz * s + nz * o);
       p.draw = (k) => {                                                                  // k 0..1: the arrow grows from its tail; the head rides on the tip
@@ -577,7 +580,7 @@ export async function createViewer(root, opts) {
         p.mesh.geometry.setFromPoints([P(a, -w), P(s, -w), P(s, w), P(a, -w), P(s, w), P(a, w), P(s, -hw * Math.min(1, k * 3)), P(t, 0), P(s, hw * Math.min(1, k * 3))]);
       };
       p.mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat); p.mesh.renderOrder = 22; p.mesh.frustumCulled = false; poiRoot.add(p.mesh); p.draw(1);
-      p.at = P(dist < 95 ? dist + 4 : 74, 0).add(skyRoot.position);                    // where its name sits: by the building, or inside the ring before the arrow
+      p.at = P(74, 0).add(skyRoot.position);                    // where its name sits: on the arrow, inside the ring
     }
   }
 
@@ -702,7 +705,7 @@ export async function createViewer(root, opts) {
     if (v) { axoOff(); cutFly(); controls.autoRotate = false; autoBtn?.classList.remove("on"); }
     else { flyTo(new THREE.Vector3(82, 40, 64), new THREE.Vector3(0, 12, 0)); }
   }
-  let cutTween = null, hTween = null, solarTween = null;          // solarTween: the sun easing to a new hour between scenes
+  let cutTween = null, hTween = null, angTween = null, solarTween = null, lightRun = false;     // angTween: section to section, the cut turns; lightRun: the light study's day is running          // solarTween: the sun easing to a new hour between scenes
   const cutDir = new THREE.Vector3(1, 0, 0); let cutS = 0, cutAng = 0, cutH = 14, horiz = false;      // plane faces the camera side: keeps everything behind dot(p, cutDir) <= cutS
   function dirFlyTo() {
     const p = new THREE.Vector3(cutDir.x * 78 - cutDir.z * 4, 26, cutDir.z * 78 + cutDir.x * 4), t = new THREE.Vector3(-cutDir.x * 2, 13, -cutDir.z * 2); flyTo(p, t);
@@ -718,11 +721,15 @@ export async function createViewer(root, opts) {
     controls.minDistance = 22; controls.maxDistance = 1400; resize();
   }
   let spinK = 0;
-  function introFlight() {                                // from far away to the hero framing, fast to slow; then the slow spin eases in
+  function introFlight(smooth) {                          // from far away to the hero framing, fast to slow; then the slow spin eases in. smooth: first out from where the camera is (no jump)
     const HT = heroTgt(), HP = heroPos(); const s1 = new THREE.Spherical().setFromVector3(HP.clone().sub(HT)); userMoved = false;
     const s0 = new THREE.Spherical(s1.radius * 2.55, s1.phi - 0.3, s1.theta + 0.95);       // far, a little higher, and 55 degrees round to the right: the camera sweeps to the left as it closes in
-    persp.position.setFromSpherical(s0).add(HT); controls.target.copy(HT); controls.autoRotate = false; autoBtn?.classList.remove("on"); spinK = 0;
-    tween = { intro: true, t: 0, ms: INTRO_MS, sph0: s0, sph1: s1, p0: persp.position.clone(), t0: HT.clone(), p1: HP.clone(), t1: HT.clone(), ease: easeOut, easeA: easeOutSoft, then: () => startSpin() };      // the spin takes over at full speed, with no ramp (auto play only)
+    controls.autoRotate = false; autoBtn?.classList.remove("on"); spinK = 0;
+    const go = () => { persp.position.setFromSpherical(s0).add(HT); controls.target.copy(HT);
+      tween = { intro: true, t: 0, ms: INTRO_MS, sph0: s0, sph1: s1, p0: persp.position.clone(), t0: HT.clone(), p1: HP.clone(), t1: HT.clone(), ease: easeOut, easeA: easeOutSoft, then: () => startSpin() }; };      // the spin takes over at full speed, with no ramp (auto play only)
+    if (!smooth) { go(); return; }
+    const c0 = new THREE.Spherical().setFromVector3(persp.position.clone().sub(HT)), e = s0.clone(); let d = e.theta - c0.theta; e.theta = c0.theta + Math.atan2(Math.sin(d), Math.cos(d));
+    tween = { t: 0, ms: 2200, sph0: c0, sph1: e, p0: persp.position.clone(), t0: controls.target.clone(), p1: persp.position.clone(), t1: HT.clone(), ease, easeA: ease, then: go };
   }
   function resetView() { if (axo) axoOff(); closeCard(); if (opened) setOpen(false); introFlight(); }
 
@@ -875,14 +882,15 @@ export async function createViewer(root, opts) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (tween) {
       tween.t += dt * 1000 / tween.ms; const k = (tween.ease || ease)(Math.min(1, tween.t));
-      if (tween.sph0) { const ka = tween.easeA(Math.min(1, tween.t)), a = tween.sph0, b = tween.sph1; camera.position.setFromSphericalCoords(a.radius + (b.radius - a.radius) * k, a.phi + (b.phi - a.phi) * k, a.theta + (b.theta - a.theta) * ka).add(tween.t1); controls.target.copy(tween.t1); }
+      if (tween.sph0) { const ka = tween.easeA(Math.min(1, tween.t)), a = tween.sph0, b = tween.sph1; camera.position.setFromSphericalCoords(a.radius + (b.radius - a.radius) * k, a.phi + (b.phi - a.phi) * k, a.theta + (b.theta - a.theta) * ka).add(tween.t1); controls.target.lerpVectors(tween.t0, tween.t1, k); }
       else { camera.position.lerpVectors(tween.p0, tween.p1, k); controls.target.lerpVectors(tween.t0, tween.t1, k); } if (tween.t >= 1) { const th = tween.then; tween = null; if (th) th(); }
     }
     if (cutTween) {
       shadowStale = true; cutTween.t += dt / 1.4; cutK = cutTween.from + (cutTween.to - cutTween.from) * ease(Math.min(1, cutTween.t));
-      if (cutTween.t >= 1) { cutTween = null; if (cutK === 0) setCut(false); }
+      if (cutTween.t >= 1) { const th = cutTween.then; cutTween = null; if (th) th(); else if (cutK === 0) setCut(false); }
     }
     if (hTween) { hTween.t += dt / 1.6; cutH = hTween.from + (hTween.to - hTween.from) * ease(Math.min(1, hTween.t)); shadowStale = true; dirty = true; if (hTween.t >= 1) hTween = null; }
+    if (angTween) { angTween.t += dt / 1.8; const k = ease(Math.min(1, angTween.t)); setAng(angTween.a0 + (angTween.a1 - angTween.a0) * k); cutS = angTween.s0 + (angTween.s1 - angTween.s0) * k; shadowStale = true; dirty = true; if (angTween.t >= 1) angTween = null; }
     if (cutK > 0) {
       if (horiz) { cutPlane.normal.set(0, -1, 0); cutPlane.constant = THREE.MathUtils.lerp(80, groundY + cutH, cutK); }          // horizontal plan cut: keeps everything below this height
       else { cutPlane.normal.copy(cutDir).negate(); cutPlane.constant = THREE.MathUtils.lerp(80, cutS, cutK); }
@@ -906,7 +914,7 @@ export async function createViewer(root, opts) {
         if (!sunDone) {                                                                      // at the end of the day (18:30) the sun stops for good; the spin goes on alone
           if (sunAcc === null || Math.abs(sunAcc - solar) > 0.06) sunAcc = solar;           // the slider holds steps of 0.05 h only, so the running time is kept separately
           const az0 = Math.atan2(sunVector(solar).x, sunVector(solar).z);
-          const dusk = Math.min(20, 12 + halfDay() - 0.2); sunAcc = Math.min(dusk, sunAcc + dt * SUN_RATE); solar = sunAcc;
+          const dusk = Math.min(20, 12 + halfDay() - 0.2); sunAcc = sunAcc >= dusk ? sunAcc : Math.min(dusk, sunAcc + dt * SUN_RATE); solar = sunAcc;     // already past dusk (after the light study): it stays there
           const az1 = Math.atan2(sunVector(solar).x, sunVector(solar).z); let daz = az1 - az0; daz = Math.atan2(Math.sin(daz), Math.cos(daz));
           sunAz += d - daz; sunIn.value = solar; sunOut.textContent = fmt(solar) + " solar"; applySun();
           if (sunAcc >= dusk) sunDone = true;
@@ -933,7 +941,7 @@ export async function createViewer(root, opts) {
         if (!vis) closeCard(); else { const x = ((tmp.x + 1) / 2) * r.width, y = ((1 - tmp.y) / 2) * r.height; placeCard(x, y); }
       }
     }
-    updateDims(r); updateTags(r);
+    updateDims(r); updateTags(r); updateSec();
     for (const L of intLights) L.intensity = 3.5 * Math.max(0, (cutK - 0.3) / 0.7);
     fill.intensity = 1.6 * cutK; finalPass.uniforms.uExposure.value = EXPOSURE * (1 + 0.35 * cutK) * (1 + 0.7 * nightK); finalPass.uniforms.uBg.value.copy(bgNow);
     if (shadowStale) { renderer.shadowMap.needsUpdate = true; shadowStale = false; }
@@ -950,36 +958,42 @@ export async function createViewer(root, opts) {
   document.addEventListener("visibilitychange", markDirty);
   // ---- sun-of-the-day slider
   const sunUi = document.createElement("div"); sunUi.className = "v3-sun";
-  sunUi.innerHTML = '<span class="label">Sun</span><input type="range" min="7" max="18.5" step="0.05" value="' + solar + '" aria-label="Time of day"><output></output>';
+  sunUi.innerHTML = '<span class="label">Time</span><input type="range" min="7" max="18.5" step="0.05" value="' + solar + '" aria-label="Time of day"><output></output>';
   root.querySelector(".v3-panel").appendChild(sunUi);
   const sunIn = sunUi.querySelector("input"), sunOut = sunUi.querySelector("output");
   const fmt = (h) => String(Math.floor(h)).padStart(2, "0") + ":" + String(Math.round((h % 1) * 60) % 60).padStart(2, "0");
-  const upd = () => { solarTween = null; solar = +sunIn.value; sunOut.textContent = fmt(solar) + " solar"; applySun(); };
+  const upd = () => { solarTween = null; lightRun = false; solar = +sunIn.value; sunOut.textContent = fmt(solar) + " solar"; applySun(); };
   sunIn.addEventListener("input", upd); upd();
   sunIn.addEventListener("pointerdown", (e) => { e.stopPropagation(); controls.autoRotate = false; autoBtn?.classList.remove("on"); });      // taking the Sun slider is also taking over: the spin and the moving sun stop
 
   // ---- cuts: two vertical sections, 8 m off the centre, and three plans (heights above the bottom of the model)
   const CUTS = { sWE: { ang: 0, s: 8 }, sNS: { ang: 90, s: 8 }, p14: { h: 14 }, p55: { h: 5.5 }, p2: { h: 2 } };
   let cutMoved = false;                                     // the cut slider moved the plan or section away from its preset: the floor areas no longer apply
-  function applyCut(c) {
-    horiz = c.h !== undefined;
-    if (horiz) cutH = c.h; else { cutS = c.s; cutAng = c.ang * Math.PI / 180; cutDir.set(Math.cos(cutAng), 0, Math.sin(cutAng)); }
+  const setAng = (a) => { cutAng = a; cutDir.set(Math.cos(a), 0, Math.sin(a)); };
+  function applyCut(c, kind = true) {                       // kind: also switch between plan and section
+    if (kind) horiz = c.h !== undefined;
+    if (c.h !== undefined) cutH = c.h; else { cutS = c.s; setAng(c.ang * Math.PI / 180); }
     shadowStale = true; dirty = true;
   }
   function cutFly() { if (horiz) flyTo(new THREE.Vector3(9, 96, 0), new THREE.Vector3(0, groundY + 6, 0)); else dirFlyTo(); }      // plan: from above, a little south of the target, so north is up
   function openCut(c) {
-    const glide = opened && cutK > 0.5 && horiz && c.h !== undefined, h0 = cutH;         // plan to plan: the cut glides to the next height
-    applyCut(c); opened = true; setCut(true); root.classList.add("is-open");
-    if (glide) { cutH = h0; cutTween = null; cutK = 1; hTween = { from: h0, to: c.h, t: 0 }; } else { hTween = null; cutTween = { from: 0, to: 1, t: 0 }; }
-  }     // each cut slides in from above / from the side
+    const live = opened && cutK > 0.5, isH = c.h !== undefined, h0 = cutH, a0 = cutAng, s0 = cutS;
+    hTween = null; angTween = null;
+    if (live && horiz && isH) { applyCut(c); cutH = h0; cutTween = null; cutK = 1; hTween = { from: h0, to: c.h, t: 0 }; }          // plan to plan: the cut glides to the next height
+    else if (live && !horiz && !isH) {                                                                                          // section to section: the cut turns round to the next one
+      applyCut(c); let d = cutAng - a0; d = Math.atan2(Math.sin(d), Math.cos(d)); angTween = { a0, a1: a0 + d, s0, s1: c.s, t: 0 }; setAng(a0); cutS = s0; cutTween = null; cutK = 1;
+    } else if (live) { applyCut(c, false); cutTween = { from: cutK, to: 0, t: 0, then: () => { applyCut(c); cutTween = { from: 0, to: 1, t: 0 }; } }; }     // plan to section: one cut leaves, the other comes in
+    else { applyCut(c); cutTween = { from: 0, to: 1, t: 0 }; }                                                               // each cut slides in from above / from the side
+    opened = true; setCut(true); root.classList.add("is-open");
+  }
   function closeCut() { if (!opened && cutK === 0) return; opened = false; root.classList.remove("is-open"); cutTween = { from: cutK, to: 0, t: 0 }; }
 
   // ---- the spatial viewer: auto play (a loop of scenes, each with its name, a typed caption and a countdown bar) and take over (any touch: the scene stays,
   // and the controls for it appear). The captions are sample texts for now.
   const SCENES = [
-    { id: "intro", name: "Intro", kind: "intro", dur: 15, text: "Le Corbusier's last church, designed from 1960 for Firminy-Vert. Left unfinished in 1978, completed by José Oubrerie in 2006." },
+    { id: "intro", name: "Église Saint-Pierre", kind: "intro", dur: 15, text: "Le Corbusier's last church, designed from 1960 for Firminy-Vert. Left unfinished in 1978, completed by José Oubrerie in 2006." },
     { id: "site", name: "Site: Site Le Corbusier", kind: "site", dur: 10, text: "The church, the Maison de la Culture, the stadium, the swimming pool and the Unité d'habitation: the largest group of Le Corbusier's works in Europe." },
-    { id: "light", name: "Light", kind: "light", dur: 15, text: "One day of sun on the concrete shell, from first light to dusk. Inside, daylight enters through the star holes, the light cannons and coloured slits.", text2: "At dusk the lights inside come on and the church glows through its openings, a lantern over the lawns of Firminy-Vert." },
+    { id: "light", name: "Light", kind: "light", dur: 15, text: "The sun on the concrete shell through the day, until dusk. Inside, daylight enters through the star holes, the light cannons and coloured slits.", text2: "At dusk the lights inside come on and the church glows through its openings, a lantern over the lawns of Firminy-Vert." },
     { id: "p14", name: "Plan +14", kind: "cut", dur: 7, text: "The nave: about 429 m², open to the full height of the concrete shell, lit through the star holes of the east wall." },
     { id: "p55", name: "Plan +5.5", kind: "cut", dur: 7, text: "Exhibition rooms: about 259 m² in the square base beneath the nave, the floors first planned for the parish rooms." },
     { id: "p2", name: "Plan +2", kind: "cut", dur: 7, text: "Lecture hall and exhibition space: about 148 m² on the lowest floor of the square base, under the exhibition rooms." },
@@ -989,52 +1003,82 @@ export async function createViewer(root, opts) {
   // floor areas measured in the model (Blender metres; the floor under each plan cut); names after the published programme
   const AREAS = { p14: [["Nave", 429, 12.66, 11.09, 6.0], ["Landing", 21, 18.61, 19.83, 7.6]], p55: [["Exhibition rooms", 259, 15.55, 7.58, 1.4]], p2: [["Lecture hall · exhibition", 148, 12.92, 9.29, -1.3]] };
   let mode = "play", sceneI = 0, sceneT = 0, idleT = 0, firstRun = true, lightPhase = 0, nightOn = false, enhanced = false, poiT = 99;
+  let ended = false, booted = false, lightT = 0, lightFrom = 10, diagK = 0, enhGoal = 1, discGoal = 1;        // ended: the auto play has run once and rests on the intro's spin
   const ov = document.createElement("div"); ov.className = "v3-ov";
-  ov.innerHTML = '<div class="v3-scene"></div><p class="v3-cap"></p><div class="v3-count"><i></i></div>';
+  ov.innerHTML = '<div class="v3-txt"><div class="v3-scene"></div><p class="v3-cap"></p></div><div class="v3-count"><i></i></div>';
   stage.appendChild(ov);
   const sceneEl = ov.querySelector(".v3-scene"), capEl = ov.querySelector(".v3-cap"), countEl = ov.querySelector(".v3-count i");
-  const capRoom = () => Math.round((parseFloat(getComputedStyle(capEl).fontSize) || 14) * 1.2 * 3 + 36);     // room kept free for the caption (three lines) under the fitted views
+  const capRoom = () => Math.round((parseFloat(getComputedStyle(capEl).fontSize) || 14) * 1.2 * 3 + (parseFloat(getComputedStyle(sceneEl).fontSize) || 22) * 1.25 + 40);     // room kept free for the scene's name and its caption (three lines) under the fitted views
   const capSize = () => { capEl.style.fontSize = Math.max(11, Math.min(stage.clientHeight / 36, stage.clientWidth / 24)).toFixed(1) + "px"; };     // three lines of caption stay within a tenth of the view's height (and the texts within three lines on narrow screens)
   new ResizeObserver(capSize).observe(stage); capSize();
   let typeTimer = 0;
-  function typeCap(txt) { clearInterval(typeTimer); capEl.textContent = ""; let i = 0; typeTimer = setInterval(() => { i += 1; capEl.textContent = txt.slice(0, i); if (i >= txt.length) clearInterval(typeTimer); }, Math.min(38, 2500 / txt.length)); }
+  function typeCap(txt) {                                   // typed in; the rest of the text is laid out but hidden, so the lines do not jump and the name above stays put
+    clearInterval(typeTimer); const a = document.createTextNode(""), b = document.createElement("span"); b.className = "v3-ghost"; b.textContent = txt; capEl.replaceChildren(a, b); let i = 0;
+    typeTimer = setInterval(() => { i += 1; a.data = txt.slice(0, i); b.textContent = txt.slice(i); if (i >= txt.length) clearInterval(typeTimer); }, Math.min(38, 2500 / txt.length));
+  }
   function showCap(txt) { clearInterval(typeTimer); capEl.textContent = txt; }
   const capFor = () => { const S = SCENES[sceneI]; return lightPhase && S.text2 ? S.text2 : S.text; };
   // labels in the view: the other buildings of the site (site views) and the floor areas (plans)
   const tags = [];
-  const mkTag = (html, cls, p, on, dy = 0) => { const e = document.createElement("span"); e.className = cls; e.innerHTML = html; dimLayer.appendChild(e); tags.push({ e, p, on, dy }); };
+  const mkTag = (html, cls, p, on, dy = 0, at = null) => { const e = document.createElement("span"); e.className = cls; e.innerHTML = html; dimLayer.appendChild(e); tags.push({ e, p, on, dy, at }); };
+  const lvTxt = (z) => (Math.abs(z) < 0.005 ? "±" : z > 0 ? "+" : "−") + Math.abs(z).toFixed(2);          // a level in metres from the east entrance (Blender z = 0)
   for (const p of POIS) mkTag(`${p.name} <i>${p.dist < 1000 ? Math.round(p.dist / 5) * 5 : (p.dist / 1000).toFixed(1) + " k"} m</i>`, "v3-poi", p.at, () => enhanced && SCENES[sceneI].kind === "site" && p.k > 0.95, p.dy || 0);
-  for (const id of Object.keys(AREAS)) for (const [nm, a, x, y, z] of AREAS[id]) mkTag(`${nm} <i>${a} m²</i>`, "v3-area", b2t(x, y, z), () => SCENES[sceneI].id === id && opened && cutK > 0.9 && !cutMoved && !hTween);
+  for (const id of Object.keys(AREAS)) for (const [nm, a, x, y, z] of AREAS[id]) mkTag(`${nm} <i>${a} m² · ${lvTxt(z)}</i>`, "v3-area", b2t(x, y, z), () => SCENES[sceneI].id === id && opened && cutK > 0.9 && !cutMoved && !hTween);
+  // sections: the floor levels beside the cut, with a dimension line up through them, and the names of the spaces on the cut
+  const LEVELS = [-1.3, 0, 1.4, 6.0, TOP], SPACES = [["Nave", 12.66, 11.09, 10.5], ["Exhibition rooms", 15.55, 7.58, 2.9], ["Lecture hall", 12.92, 9.29, 0.1]];
+  const secSide = new THREE.Vector3(), secOn = () => lens30 && opened && cutK > 0.9 && !angTween && SCENES[sceneI].kind === "cut";
+  const sideNow = () => secSide.set(-cutDir.z, 0, cutDir.x);                                 // along the cut, towards the left of the screen
+  const edgeL = () => { sideNow(); return secSide.x * 0.15 - secSide.z * 1.65 + 25.3 / 2; };      // the left side of the church on screen, measured along the cut
+  const onCut = (v, along, y) => { sideNow(); return v.copy(cutDir).multiplyScalar(cutS + 0.05).addScaledVector(secSide, along).setY(y); };
+  for (const z of LEVELS) mkTag(lvTxt(z), "v3-lvl v3-lvsec", new THREE.Vector3(), () => secOn(), 0, (p) => onCut(p, edgeL() + 5.6, z));
+  for (const [nm, x, y, h] of SPACES) { const q = b2t(x, y, 0); mkTag(nm, "v3-area", new THREE.Vector3(), () => secOn() && !cutMoved, 0, (p) => onCut(p, sideNow().dot(q), h)); }
+  const secRoot = new THREE.Group(); secRoot.visible = false; scene.add(secRoot); let secLines = null, secKey = "";
+  function updateSec() {
+    const on = notesOn && secOn(); secRoot.visible = on; if (!on) return;
+    const key = cutAng.toFixed(3) + "/" + cutS.toFixed(2); if (key === secKey) return; secKey = key;
+    const L = edgeL(), pts = [], P = (along, y) => onCut(new THREE.Vector3(), L + along, y);
+    for (const z of LEVELS) pts.push(P(0.5, z), P(3.2, z));                  // a tick at each level
+    pts.push(P(1.9, LEVELS[0]), P(1.9, TOP));                                    // and the line up through them
+    if (secLines) { secRoot.remove(secLines); secLines.geometry.dispose(); }
+    secLines = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), dimMat); secLines.computeLineDistances(); secLines.renderOrder = 23; secLines.frustumCulled = false; secRoot.add(secLines);
+  }
   function updateTags(r) {
     for (const t of tags) {
-      let vis = notesOn && t.on(); if (vis) { dimV.copy(t.p).project(camera); vis = dimV.z < 1 && Math.abs(dimV.x) < 1.1 && Math.abs(dimV.y) < 1.1; }
+      let vis = notesOn && t.on(); if (vis) { if (t.at) t.at(t.p); dimV.copy(t.p).project(camera); vis = dimV.z < 1 && Math.abs(dimV.x) < 1.1 && Math.abs(dimV.y) < 1.1; }
       t.e.style.display = vis ? "" : "none";
       if (vis) t.e.style.transform = `translate(${((dimV.x + 1) / 2) * r.width}px, ${((1 - dimV.y) / 2) * r.height + t.dy}px) translate(-50%, -50%)`;
     }
   }
-  function enhance(on) { const site = SCENES[sceneI].kind === "site"; sunK = on && site ? 0.4 : 1; enhanced = on; arcBold.visible = on; arc.visible = !on; sunDisc.scale.setScalar(on ? (site ? 1.6 : 2.6) : 1); applySun(); poiRoot.visible = on && SCENES[sceneI].kind === "site"; dirty = true; }     // the arrows to the other buildings: site view only
+  function enhance(on) { const site = SCENES[sceneI].kind === "site"; enhGoal = on && site ? 0.4 : 1; discGoal = on ? (site ? 1.6 : 2.6) : 1; enhanced = on; arcBold.visible = on; arc.visible = !on; if (on && site) poiRoot.visible = true; applySun(); dirty = true; }     // the sun's size and strength ease to the new goal (director); the arrows: site view only
+  // the site diagram: roads, footpaths and parking (circulation, by kind of traffic) and the buildings and grounds by function, in colour over the surroundings
+  const LEG = [["Circulation"], ["road", "Roads · vehicles", "ln"], ["sidewalk", "Footpaths and squares · on foot", "ln thin"], ["parking", "Parking"], ["Functions"], ["b_lc", "Le Corbusier"], ["b_pub", "Public and sport buildings"], ["b_res", "Housing"], ["b_com", "Shops and offices"], ["sport", "Sport grounds"]];
+  const legend = document.createElement("div"); legend.className = "v3-legend"; legend.style.display = "none";
+  legend.innerHTML = LEG.map(([k, t, c]) => (t ? `<span><i class="${c || ""}" style="background:#${DIAG[k].toString(16).padStart(6, "0")}"></i>${t}</span>` : `<b>${k}</b>`)).join("");
+  stage.appendChild(legend);
+  function applyDiag(k) { const e = k * k * (3 - 2 * k); for (const d of diagMats) { d.m.color.copy(d.c0).lerp(d.tint, e); if (d.lit) d.m.emissive.copy(d.e0).lerp(d.tint, e); } legend.style.opacity = e.toFixed(3); legend.style.display = e > 0.01 ? "" : "none"; dirty = true; }
+  function setEnded(v) { ended = v; root.classList.toggle("is-ended", v); }
   function setSolar(h) { solar = h; sunIn.value = h; sunOut.textContent = fmt(h) + " solar"; applySun(); }
 
-  const easeSolar = (h, s = 2.2) => { solarTween = { from: solar, to: h, t: 0, s }; };          // the sun (and the night lights with it) moves to the new hour in about two seconds
+  const easeSolar = (h, s = 2.2) => { solarTween = { from: solar, to: h, t: 0, s, az0: Math.atan2(Math.sin(sunAz), Math.cos(sunAz)) }; };          // the sun (and the night lights with it) moves to the new hour in about two seconds, and back round to its own place
   const nightHour = () => Math.min(20.5, 12 + halfDay() + 0.6);
   function siteView() {                                     // straight down on the compass, north up; the ring fitted between the title and the caption
-    const w = stage.clientWidth, h = stage.clientHeight, top = 64, bottom = capRoom();
-    const avail = Math.max(120, Math.min(w - 24, h - top - bottom)), t = Math.tan(THREE.MathUtils.degToRad(persp.fov / 2));
+    const w = stage.clientWidth, h = stage.clientHeight, top = 28, bottom = capRoom();
+    const avail = Math.max(120, Math.min(w - 24, h - top - bottom)), t = Math.tan(THREE.MathUtils.degToRad(fovWant / 2));
     const D = (SKY_R + 18) * h / (avail * t), dy = ((bottom - top) / 2) * (2 * D * t / h);          // the ring sits in the free band: the camera aims a little south of it
     const T = new THREE.Vector3(SKY_C.x + dy, 0, SKY_C.z);
     return { p: T.clone().add(new THREE.Vector3(D * Math.sin(0.03), D * Math.cos(0.03), 0)), t: T };
   }
   function secView() {                                      // cross sections: one-point perspective, the camera square to the cut, the section fitted between the title and the caption
-    const w = stage.clientWidth, h = stage.clientHeight, top = 64, bottom = capRoom(), t = Math.tan(THREE.MathUtils.degToRad(fovWant / 2));
+    const w = stage.clientWidth, h = stage.clientHeight, top = 28, bottom = capRoom(), t = Math.tan(THREE.MathUtils.degToRad(fovWant / 2));
     const side = new THREE.Vector3(-cutDir.z, 0, cutDir.x), c = new THREE.Vector3(0.15, (groundY + 33.3) / 2, -1.65), sz = new THREE.Vector3(25.3, 33.3 - groundY, 25.3);     // the church: its 25.3 m square and its height
-    const W = Math.abs(side.x) * sz.x + Math.abs(side.z) * sz.z + 4, H = sz.y + 4;
+    const W = Math.abs(side.x) * sz.x + Math.abs(side.z) * sz.z + 18, H = sz.y + 4;          // room on the left for the levels
     const D = Math.max(H * h / (2 * t * Math.max(120, h - top - bottom)), W * h / (2 * t * Math.max(120, w - 24))), dy = ((bottom - top) / 2) * (2 * D * t / h);
     const T = cutDir.clone().multiplyScalar(cutS).addScaledVector(side, side.dot(c)).setY(c.y - dy);
     return { p: T.clone().addScaledVector(cutDir, D), t: T };
   }
   const PLAN_DIR = new THREE.Vector3(Math.cos(0.85) * 0.866, Math.sin(0.85), Math.cos(0.85) * 0.5);      // plans: seen from the south-south-west, about 50 degrees down
   function planView() {                                     // one oblique view for all the plans, the church fitted between the title and the caption
-    const w = stage.clientWidth, h = stage.clientHeight, top = 64, bottom = capRoom(), t = Math.tan(THREE.MathUtils.degToRad(persp.fov / 2)), R = 17;
+    const w = stage.clientWidth, h = stage.clientHeight, top = 28, bottom = capRoom(), t = Math.tan(THREE.MathUtils.degToRad(fovWant / 2)), R = 17;
     const D = R * h / (t * Math.max(120, Math.min(h - top - bottom, w - 24))), dy = ((bottom - top) / 2) * (2 * D * t / h);
     const up = new THREE.Vector3(0, 1, 0).addScaledVector(PLAN_DIR, -PLAN_DIR.y).normalize();       // the screen's up direction, for shifting the church into the free band
     const T = new THREE.Vector3(0.15, groundY + 6, -1.65).addScaledVector(up, -dy);
@@ -1044,43 +1088,53 @@ export async function createViewer(root, opts) {
   function flyHero(ms, then) {                              // back to the hero framing, along a sphere round the church
     const HT = heroTgt(), s1 = new THREE.Spherical().setFromVector3(heroPos().clone().sub(HT)), s0 = new THREE.Spherical().setFromVector3(camera.position.clone().sub(HT));
     let d = s1.theta - s0.theta; d = Math.atan2(Math.sin(d), Math.cos(d)); s1.theta = s0.theta + d;
-    tween = { t: 0, ms, sph0: s0, sph1: s1, p0: camera.position.clone(), t0: HT.clone(), p1: heroPos().clone(), t1: HT.clone(), ease, easeA: ease, then };
+    tween = { t: 0, ms, sph0: s0, sph1: s1, p0: camera.position.clone(), t0: controls.target.clone(), p1: heroPos().clone(), t1: HT.clone(), ease, easeA: ease, then };
   }
   onResize = () => { if (siteLock) dirty = true; };          // a new size: the next frame refits the top view
   const startSpin = () => { if (mode !== "play") return; controls.autoRotate = true; spinSun = true; spinMul = 1; spinK = 1; };
-  function enterScene(i) {
-    sceneI = i; sceneT = 0; lightPhase = 0; cutMoved = false; solarTween = null; const S = SCENES[i], play = mode === "play";
-    root.dataset.scene = S.kind; sceneEl.textContent = S.name; (play ? typeCap : showCap)(S.text);
+  function enterScene(i, zoom = false) {                    // zoom: the intro with its flight in (the Play button)
+    sceneI = i; sceneT = 0; lightPhase = 0; lightRun = false; cutMoved = false; solarTween = null; const S = SCENES[i], play = mode === "play";
+    root.dataset.scene = S.kind; sceneEl.textContent = S.name; typeCap(S.text);
     for (const [act, k] of [["prev", -1], ["next", 1]]) { const b = q(`[data-act="${act}"]`), nm = SCENES[(i + k + SCENES.length) % SCENES.length].name; if (b) { b.querySelector("span").textContent = nm; b.title = nm; } }     // the buttons carry the names of the scenes they lead to
-    controls.autoRotate = false; spinSun = false; spinMul = 1; tween = null; sunAz = 0; camAzPrev = null; userMoved = S.kind !== "intro";
+    controls.autoRotate = false; spinSun = false; spinMul = 1; tween = null; camAzPrev = null; userMoved = S.kind !== "intro";
+    easeSolar(solar);                                       // the sun keeps its hour and swings back to its own place; the scenes below set their own hours
     enhance(S.kind === "site" || S.kind === "light"); siteLock = S.kind === "site" || S.kind === "light";
     const sec = S.kind === "cut" && CUTS[S.id].h === undefined; if (sec !== lens30) { lens30 = sec; resize(); }
     if (S.kind === "site") { poiT = 0; for (const p of POIS) { p.k = 0; p.draw(0); } }                     // the arrows are drawn in, one after the other
     if (S.kind === "intro") {
-      closeCut(); if (play) { if (firstRun) setSolar(10); else easeSolar(9); }
-      if (firstRun) { firstRun = false; introFlight(); } else flyHero(play ? 2200 : 1500, startSpin);
+      closeCut(); if (!booted) setSolar(10); else if (play) easeSolar(firstRun || zoom ? 10 : 9);
+      if (firstRun || zoom) { firstRun = false; introFlight(booted); } else flyHero(play ? 2200 : 1500, startSpin);
     } else if (S.kind === "site" || S.kind === "light") {
       closeCut(); const v = siteView(); flyTo(v.p, v.t, 1600);
-      setSolar(S.kind === "light" ? 12 - halfDay() - 0.4 : 10.5);
-    } else { openCut(CUTS[S.id]); easeSolar(nightOn ? nightHour() : 12); siteLock = true; const v = sec ? secView() : planView(); flyTo(v.p, v.t, 1600); syncCut(); }
-    dirty = true;
+      if (S.kind === "site") easeSolar(10.5);
+      else { const rise = 12 - halfDay(), set = 12 + halfDay(); lightFrom = solar >= rise - 0.4 && solar <= set - 2 ? solar : rise - 0.4; easeSolar(lightFrom, 1.6); lightT = -1.6; lightRun = true; }   // the day runs on from the hour it is (or from dawn)
+    } else { openCut(CUTS[S.id]); easeSolar(nightOn ? nightHour() : 12); siteLock = true; const v = sec ? secView() : planView(); if (!angTween) flyTo(v.p, v.t, 1600); syncCut(); }     // section to section: the camera turns with the cut
+    booted = true; dirty = true;
   }
   function director(dt) {
     if (renderer.xr.isPresenting) return;
+    const S = SCENES[sceneI];
     if (poiT < 4) {                                         // site view: each arrow grows out in 0.8 s, 0.35 s after the one before, once the camera has landed
       poiT += dt; POIS.forEach((p, i) => { const k = THREE.MathUtils.clamp((poiT - 1.4 - i * 0.35) / 0.8, 0, 1); if (k !== p.k) { p.k = k; p.draw(ease(k)); } }); dirty = true;
     }
-    if (solarTween) { solarTween.t += dt / solarTween.s; const u = Math.min(1, solarTween.t); setSolar(solarTween.from + (solarTween.to - solarTween.from) * u * u * (3 - 2 * u)); if (u >= 1) solarTween = null; }
-    const S = SCENES[sceneI];
-    if (mode === "play") {
-      sceneT += dt;
-      if (S.kind === "light") {
-        const rise = 12 - halfDay(), set = 12 + halfDay();
-        if (sceneT < 9) { const u = Math.min(1, sceneT / 9), e = u * u * (3 - 2 * u); setSolar(rise - 0.4 + (set - rise + 1.0) * e); }   // night to night in 9 s, slow at dawn and dusk
-        else if (!lightPhase) { lightPhase = 1; siteLock = false; enhance(false); typeCap(S.text2); flyHero(3000, startSpin); }   // then back down to the spin
+    if (S.kind !== "site" && poiRoot.visible) {             // leaving the site view: the arrows draw back in
+      let any = false; for (const p of POIS) if (p.k > 0) { p.k = Math.max(0, p.k - dt / 0.6); p.draw(ease(p.k)); any = true; } if (!any) poiRoot.visible = false; dirty = true;
+    }
+    { const want = S.kind === "site" && enhanced && poiT > 2.6 ? 1 : 0; if (diagK !== want) { diagK = want > diagK ? Math.min(1, diagK + dt / 1.2) : Math.max(0, diagK - dt / 0.8); applyDiag(diagK); } }     // the diagram comes in after the arrows
+    if (Math.abs(sunK - enhGoal) > 0.002 || Math.abs(sunDisc.scale.x - discGoal) > 0.002) { const f = Math.min(1, dt * 2.5); sunK += (enhGoal - sunK) * f; sunDisc.scale.setScalar(sunDisc.scale.x + (discGoal - sunDisc.scale.x) * f); applySun(); }
+    if (solarTween) { solarTween.t += dt / solarTween.s; const u = Math.min(1, solarTween.t), e = u * u * (3 - 2 * u); sunAz = solarTween.az0 * (1 - e); setSolar(solarTween.from + (solarTween.to - solarTween.from) * e); if (u >= 1) solarTween = null; }
+    if (lightRun) {                                         // the light study: the day runs on to night in 9 s, once (in auto play and from the buttons alike), slow at dawn and dusk
+      lightT += dt;
+      if (lightT >= 0) {
+        const u = Math.min(1, lightT / 9), e = u * u * (3 - 2 * u); setSolar(lightFrom + (12 + halfDay() + 0.6 - lightFrom) * e);
+        if (u >= 1) { lightRun = false; lightPhase = 1; typeCap(S.text2); if (mode === "play") { siteLock = false; enhance(false); flyHero(3000, startSpin); } }     // auto play: then back down to the spin
       }
-      countEl.style.transform = `scaleX(${Math.max(0, 1 - sceneT / S.dur).toFixed(4)})`;
-      if (sceneT >= S.dur) enterScene((sceneI + 1) % SCENES.length);
+    }
+    if (mode === "play") {
+      if (!ended) {
+        sceneT += dt; countEl.style.transform = `scaleX(${Math.max(0, 1 - sceneT / S.dur).toFixed(4)})`;
+        if (sceneT >= S.dur) { if (sceneI === SCENES.length - 1) { setEnded(true); enterScene(0); } else enterScene(sceneI + 1); }     // after the last scene: back to the intro's spin, and it stays there
+      }
     } else {
       idleT += dt;
       if (idleT > 30 && !controls.autoRotate && !tween) { controls.autoRotate = true; spinMul = 0.3; spinSun = false; }   // idle for 30 s: a slow spin
@@ -1096,7 +1150,7 @@ export async function createViewer(root, opts) {
   root.querySelector(".v3-explore")?.addEventListener("click", () => takeOver());
   const PLAY_ICON = '<path d="M8 5l11 7-11 7z"/>', PAUSE_ICON = '<path d="M8 5v14M16 5v14"/>';
   function setMode(m) {
-    mode = m; root.classList.toggle("is-play", m === "play"); root.classList.toggle("is-take", m === "take"); if (m === "take") root.classList.add("was-take");
+    mode = m; if (m === "take") setEnded(false); root.classList.toggle("is-play", m === "play"); root.classList.toggle("is-take", m === "take"); if (m === "take") root.classList.add("was-take");
     const pb = q('[data-act="play"]'); if (pb) { pb.querySelector("svg").innerHTML = m === "play" ? PAUSE_ICON : PLAY_ICON; pb.querySelector("span").textContent = m === "play" ? "Pause" : "Play"; pb.title = m === "play" ? "Pause" : "Auto play"; }
     idleT = 0; setTouch(); setHint(); fitPage(); dirty = true;
   }
@@ -1120,12 +1174,14 @@ export async function createViewer(root, opts) {
   // take-over controls: previous / play / next and info; per scene the sun, the day of the year, or day / night
   q('[data-act="prev"]')?.addEventListener("click", () => { setMode("take"); enterScene((sceneI + SCENES.length - 1) % SCENES.length); });
   q('[data-act="next"]')?.addEventListener("click", () => { setMode("take"); enterScene((sceneI + 1) % SCENES.length); });
-  q('[data-act="play"]')?.addEventListener("click", () => { if (mode === "play") takeOver(); else { setMode("play"); enterScene(sceneI); } });     // play / pause
+  q('[data-act="play"]')?.addEventListener("click", () => { if (mode === "play") takeOver(); else { setMode("play"); setEnded(false); enterScene(sceneI, true); } });     // play / pause (on the intro, with its flight in)
   q('[data-act="restart"]')?.addEventListener("click", () => {                                   // from the very beginning: as on first load, with the intro flight
     root.classList.remove("was-take"); if (!notesOn) notesBtn?.click();
     nightOn = false; dnBtn.textContent = "Night"; dnBtn.classList.remove("on"); dayIn.value = 237; updDay();
-    firstRun = true; setMode("play"); enterScene(0);
+    firstRun = true; setEnded(false); setMode("play"); enterScene(0);
   });
+  root.querySelector(".v3-replay")?.addEventListener("click", () => q('[data-act="restart"]')?.click());
+  root.querySelector(".v3-more")?.addEventListener("click", () => document.getElementById("views")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   sunIn.min = 4; sunIn.max = 20.5;
   const dayUi = document.createElement("div"); dayUi.className = "v3-sun v3-day";
   dayUi.innerHTML = '<span class="label">Day</span><input type="range" min="1" max="365" step="1" value="237" aria-label="Day of the year"><output></output>';
@@ -1147,7 +1203,7 @@ export async function createViewer(root, opts) {
     const c = CUTS[SCENES[sceneI].id]; if (!c) return; const plan = c.h !== undefined;
     cutLbl.textContent = plan ? "Height" : "Cut"; cutIn.min = plan ? 0.5 : -14; cutIn.max = plan ? 35 : 14; cutIn.value = plan ? c.h : c.s; showCutVal();
   }
-  cutIn.addEventListener("input", () => { if (mode === "play") takeOver(); hTween = null; if (horiz) cutH = +cutIn.value; else cutS = +cutIn.value; cutMoved = true; shadowStale = true; dirty = true; showCutVal(); });
+  cutIn.addEventListener("input", () => { if (mode === "play") takeOver(); hTween = null; angTween = null; if (horiz) cutH = +cutIn.value; else cutS = +cutIn.value; cutMoved = true; shadowStale = true; dirty = true; showCutVal(); });
   cutUi.addEventListener("pointerdown", (e) => e.stopPropagation());
   for (const el of [sunUi, dayUi, dnBtn]) el.addEventListener("pointerdown", (e) => e.stopPropagation());
 

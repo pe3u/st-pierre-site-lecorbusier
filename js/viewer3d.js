@@ -192,7 +192,7 @@ export async function createViewer(root, opts) {
         sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vCW; uniform vec2 uC0;");
       };
       m.customProgramCacheKey = () => "ctx200c";
-      if (!bld) { const k = def[1] + 7; m.polygonOffset = true; m.polygonOffsetFactor = -k; m.polygonOffsetUnits = -2 * k; } else { m.polygonOffset = true; m.polygonOffsetFactor = 1; m.polygonOffsetUnits = 2; }      // the flat layers lie almost level: each one is drawn a step nearer than the one under it, so they no longer flicker from afar
+      if (!bld) { const k = def[1] + 7; m.polygonOffset = true; m.polygonOffsetFactor = -k; m.polygonOffsetUnits = -2 * k; }      // the flat layers lie almost level: each one is drawn a step nearer than the one under it, so they no longer flicker from afar
       o.material = m; o.renderOrder = def[1]; o.frustumCulled = false; o.castShadow = false; o.receiveShadow = false;
       if (DIAG[key] && key !== "road" && key !== "sidewalk") diagMats.push({ m, c0: m.color.clone(), e0: m.emissive.clone(), lit: m.emissiveIntensity > 0 && m.emissive.r > 0, tint: bld ? new THREE.Color(DIAG[key]).multiplyScalar(0.25) : new THREE.Color(0x7f9c58), et: bld ? shown(DIAG[key]).multiplyScalar(1 / 0.85) : null });      // buildings: flat colour, mostly from their glow; grounds turn to lawn: their bubbles carry the colour
     });
@@ -213,6 +213,43 @@ export async function createViewer(root, opts) {
       const L = new THREE.PointLight(col, 0, 14, 1.6); L.position.copy(v); scene.add(L); intLights.push(L);
     }
   }
+
+  // the three light cannons, red, yellow and green, as in the church: in the cut views each throws its coloured light into the nave
+  // (a spot that washes the walls and the gallery, a faint shaft of light, the opening glowing). The model has the red and the yellow tubes;
+  // the green opening is added in the roof slab beside the yellow one, square to the slope like the other two
+  const CANNON_AX = new THREE.Vector3(0.55, 0.84, 0).normalize();      // the cannons' axis, up towards the south sun
+  const CANNONS = [   // colour; its opening (Blender m) and radius; a tube (the red and the yellow) or only a hole in the slab (the green); where its light lands (Blender m); spot half-angle; strength
+    { col: 0xff2a1a, at: [15.13, 2.59, 25.97], r: 0.78, tube: true, to: [13.0, 8.0, 0.0], ang: 0.15, k: 1.3 },
+    { col: 0xffc21a, at: [9.8, 9.55, 28.02], r: 0.72, tube: true, to: [2.8, 9.6, 14.3], ang: 0.13, k: 0.6 },
+    { col: 0x2ee05a, at: [15.2, 12.2, 27.12], r: 0.7, tube: false, to: [23.0, 12.2, 13.6], ang: 0.18, k: 0.9 },
+  ];
+  const cannonFx = [], noAO = [];
+  for (const cn of CANNONS) {
+    const mouth = b2t(...cn.at);
+    // the glass at the end of the opening, glowing, brighter at its core: up inside the tube, or just under the ceiling
+    const geo = new THREE.CircleGeometry(cn.r, 40), cc = new THREE.Color(cn.col), core = cc.clone().lerp(new THREE.Color(0xffffff), 0.55), cols = [];
+    for (let i = 0; i < geo.attributes.position.count; i++) { const c = i === 0 ? core : cc; cols.push(c.r, c.g, c.b); }
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(cols, 3));
+    const gm = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); gm.color.setScalar(1.3); gm.clipShadows = true;
+    const disc = new THREE.Mesh(geo, gm); disc.position.copy(mouth).addScaledVector(CANNON_AX, cn.tube ? 0.5 : -0.04); disc.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), CANNON_AX); scene.add(disc);
+    glowMats.push({ mat: gm, base: gm.color.clone() });
+    const to = b2t(...cn.to), dir = to.clone().sub(mouth), len = dir.length(); dir.normalize();
+    const L = new THREE.SpotLight(cn.col, 0, len * 1.25, cn.ang, 0.7, 2); L.position.copy(mouth); L.target.position.copy(to); scene.add(L, L.target);
+    // the shaft: an open cone from the opening along the beam, fading down its length and towards its edges, added onto what lies behind
+    const r1 = cn.r, cg = new THREE.CylinderGeometry(r1, r1 + Math.tan(cn.ang) * len, len, 32, 1, true); cg.translate(0, -len / 2, 0);
+    const sm = new THREE.MeshBasicMaterial({ color: cn.col, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    sm.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying float vAlong; varying vec3 vNv; varying vec3 vVp;")
+        .replace("#include <begin_vertex>", `#include <begin_vertex>
+vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal); vVp = -(modelViewMatrix * vec4(position, 1.0)).xyz;`);
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vAlong; varying vec3 vNv; varying vec3 vVp;")
+        .replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.a *= pow(1.0 - clamp(vAlong, 0.0, 1.0), 1.6) * pow(abs(dot(normalize(vNv), normalize(vVp))), 1.5);");
+    };
+    sm.customProgramCacheKey = () => "shaft" + len.toFixed(2);
+    const shaft = new THREE.Mesh(cg, sm); shaft.position.copy(mouth); shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir); shaft.renderOrder = 8; shaft.frustumCulled = false; shaft.visible = false; scene.add(shaft); noAO.push(shaft);
+    cannonFx.push({ L, sm, shaft, k: cn.k });
+  }
+  function cannonLight(f) { for (const c of cannonFx) { c.L.intensity = 900 * c.k * f; c.sm.opacity = 0.16 * f; c.shaft.visible = f > 0.001; } }      // the spots stay in the scene (switching lights on and off would rebuild every shader)
 
   // architectural facade lighting: one wide flood light per facade, 46 m out from the church, on the ground and aimed up the wall; these are real lights, so they cast shadows (reveals, balconies, the ramp)
   const flood = [];
@@ -642,6 +679,7 @@ export async function createViewer(root, opts) {
   gtao.updateGtaoMaterial({ radius: 1.6, distanceExponent: 1.6, thickness: 1.2, scale: 1.2, samples: 16, distanceFallOff: 1.0, screenSpaceRadius: false });
   gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, radiusExponent: 1, rings: 2, samples: 12 });
   gtao.blendIntensity = 1.0;
+  { const ov = gtao._overrideVisibility.bind(gtao); gtao._overrideVisibility = () => { ov(); for (const o of noAO) if (o.visible) { o.visible = false; gtao._visibilityCache.push(o); } }; }      // the cannons' shafts are light, not surfaces: kept out of the occlusion
   const finalPass = new ShaderPass({
     uniforms: { tDiffuse: { value: null }, uExposure: { value: EXPOSURE }, uBg: { value: new THREE.Vector3(1, 1, 1) } },
     vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
@@ -903,6 +941,7 @@ export async function createViewer(root, opts) {
     if (planeViz.visible) { planeViz.position.copy(cutDir).multiplyScalar(cutS).setY(13); planeViz.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cutDir); }
     if (renderer.xr.isPresenting && xrSession) {
       for (const L of intLights) L.intensity = 3.5 * Math.max(0, (cutK - 0.3) / 0.7);
+      cannonLight(Math.max(0, (cutK - 0.3) / 0.7));
       fill.intensity = 1.6 * cutK; xrStep(dt); if (shadowStale) { renderer.shadowMap.needsUpdate = true; shadowStale = false; } if (xrSession) renderer.render(scene, camera); return;
     }
     if (controls.autoRotate) { spinK = Math.min(1, spinK + dt / 3.0); controls.autoRotateSpeed = SPIN_SPEED * spinMul * spinK * spinK * (3 - 2 * spinK); } else spinK = 0;     // the spin eases in over 3 s; spinMul: slower when idle
@@ -947,6 +986,7 @@ export async function createViewer(root, opts) {
     }
     updateDims(r); updateSec(); updatePlanDims(); updateTags(r);
     for (const L of intLights) L.intensity = 3.5 * Math.max(0, (cutK - 0.3) / 0.7);
+    cannonLight(Math.max(0, (cutK - 0.3) / 0.7));
     fill.intensity = 1.6 * cutK; finalPass.uniforms.uExposure.value = EXPOSURE * (1 + 0.35 * cutK) * (1 + 0.7 * nightK); finalPass.uniforms.uBg.value.copy(bgNow);
     if (shadowStale) { renderer.shadowMap.needsUpdate = true; shadowStale = false; }
     if (lite) { renderer.toneMappingExposure = EXPOSURE * 0.36 * (1 + 0.35 * cutK) * (1 + 0.7 * nightK); renderer.render(scene, camera); } else composer.render();
@@ -1108,7 +1148,7 @@ export async function createViewer(root, opts) {
   }
   function enhance(on) { const site = SCENES[sceneI].kind === "site"; enhGoal = on && site ? 0.4 : 1; discGoal = on ? (site ? 1.6 : 2.6) : 1; enhanced = on; arcBold.visible = on; arc.visible = !on; if (on && site) poiRoot.visible = true; applySun(); dirty = true; }     // the sun's size and strength ease to the new goal (director); the arrows: site view only
   // the site diagram, drawn like an urban analysis plan: cars as dashed navy lines (open chevrons where the traffic carries on beyond the map, or the way a one-way street runs),
-  // pedestrians as red ladder arrows, parking and sport grounds as bubbles (a solid fill, hatching that runs on past the edge, a dark contour), every building outlined;
+  // pedestrians as red ladder arrows, parking and sport grounds as bubbles (a solid fill, hatching that runs on past the edge);
   // OpenStreetMap, prepared by scripts/make_circ.cjs, all draped on the ground
   const NAVY = DIAG.road, RED = DIAG.sidewalk, BUB = { parking: [NAVY, 0xf2a093], sport: [DIAG.sport, RED], pitch: [DIAG.sport, RED] };          // bubbles: fill, hatching
   const hx = (c) => "#" + c.toString(16).padStart(6, "0");
@@ -1119,7 +1159,7 @@ export async function createViewer(root, opts) {
     fn: (f) => `<i class="fn" style="--c:${hx(f)}"></i>`,
   };
   const LEG = [["Circulation"], [SW.road, "Roads"], [SW.ped, "Pedestrians"], [SW.hat(BUB.parking), "Parkings"], ["Functions"], [SW.fn(DIAG.b_lc), "Le Corbusier"], [SW.fn(DIAG.b_pub), "Public and sport buildings"], [SW.fn(DIAG.b_res), "Housing"], [SW.fn(DIAG.b_com), "Shops and offices"], [SW.hat(BUB.sport), "Sport grounds"]];
-  const circRoot = new THREE.Group(); circRoot.visible = false; scene.add(circRoot); const circMats = [], circLines = []; let circState = 0;
+  const circRoot = new THREE.Group(); circRoot.visible = false; scene.add(circRoot); const circMats = []; let circState = 0;
   function buildCirc() {
     if (circState || !ctxScene || !contextUrl) return; circState = 1;
     fetch(contextUrl.replace(/[^/]+$/, "circ.json")).then((r) => r.json()).then((c) => {
@@ -1144,20 +1184,13 @@ export async function createViewer(root, opts) {
       };
       const add = (pos, mat, ord) => { const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); const ms = new THREE.Mesh(g, mat); ms.renderOrder = ord; ms.frustumCulled = false; circRoot.add(ms); };
       const quad = (pos, p0, p1, p2, p3) => pos.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
-      // bubbles: a solid fill with its hatching, the hatching again a little off (so it runs past the edge), a dark contour; parking marked P
-      const contourM = mk(NAVY, 1);
+      // bubbles: a solid fill with its hatching, the hatching again a little off (so it runs past the edge); parking marked P
       for (const ar of c.area) {
         const [fc, hc] = BUB[ar.k], pts = ar.p.map(V), yc = new Map();
         const yAt = (x, z) => { const k = x.toFixed(2) + "," + z.toFixed(2); if (!yc.has(k)) yc.set(k, Y(x, z) - 0.15); return yc.get(k); };
         const flat = (q, mat, ord) => { const g = new THREE.ShapeGeometry(new THREE.Shape(q.map(([x, z]) => new THREE.Vector2(x, z)))), p = g.attributes.position, pos = []; for (const i of g.index.array) { const x = p.getX(i), z = p.getY(i); pos.push(x, yAt(x, z), z); } add(pos, mat, ord); };
         flat(pts, hatch(fc, 0.92, hc, false), 18);
         flat(pts.map(([x, z]) => [x - 2.6, z + 2.6]), hatch(fc, 1, hc, true), 19);
-        const rim = [];
-        for (let i = 0; i < pts.length; i++) {
-          const [x0, z0] = pts[i], [x1, z1] = pts[(i + 1) % pts.length], l = Math.hypot(x1 - x0, z1 - z0) || 1, nx = -(z1 - z0) / l * 0.45, nz = (x1 - x0) / l * 0.45, y0 = yAt(x0, z0) + 0.05, y1 = yAt(x1, z1) + 0.05;
-          quad(rim, [x0 - nx, y0, z0 - nz], [x1 - nx, y1, z1 - nz], [x1 + nx, y1, z1 + nz], [x0 + nx, y0, z0 + nz]);
-        }
-        add(rim, contourM, 20);
         if (ar.k === "parking") { let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x / pts.length; cz += z / pts.length; } mkTag("P", "v3-pk", new THREE.Vector3(cx, Y(cx, cz) + 0.5, cz), () => SCENES[sceneI].kind === "site" && diagK > 0.6); }
       }
       // a centre line, resampled every 2 m: where it is, and which way it runs, at any distance along it
@@ -1211,18 +1244,21 @@ export async function createViewer(root, opts) {
         for (const [sb, st] of [[L - hl, L], [hl, 0]]) { const bq = at(sb), t = at(st); pos.push(...P3(bq.x - bq.dz * hw, bq.z + bq.dx * hw), ...P3(t.x, t.z), ...P3(bq.x + bq.dz * hw, bq.z - bq.dx * hw)); }
         add(pos, pedM, 22);
       }
-      // every building outlined in navy, like the drawn contours
-      const edgeM = new THREE.LineBasicMaterial({ color: shown(NAVY), transparent: true, opacity: 0 }); edgeM.userData.op = 0.85; circMats.push(edgeM);
-      const bl = []; ctxScene.traverse((o) => { if (o.isMesh && /^ctx_b_/.test(o.name)) bl.push(o); });
-      for (const o of bl) { const ln = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 30), edgeM); ln.frustumCulled = false; ln.visible = false; o.add(ln); circLines.push(ln); }
       circState = 2; applyDiag(diagK);
     }).catch((e) => { console.warn("circulation not loaded", e); });
   }
   const legend = document.createElement("div"); legend.className = "v3-legend"; legend.style.display = "none";
   legend.innerHTML = LEG.map(([k, t]) => (t ? `<span>${k}${t}</span>` : `<b>${k}</b>`)).join("");
   stage.appendChild(legend);
-  function applyDiag(k) { const e = k * k * (3 - 2 * k); if (k > 0) buildCirc(); circRoot.visible = e > 0.01; for (const l of circLines) l.visible = e > 0.01; for (const m of circMats) m.opacity = m.userData.op * e; for (const d of diagMats) { d.m.color.copy(d.c0).lerp(d.tint, e); if (d.lit) d.m.emissive.copy(d.e0).lerp(d.et || d.tint, e); } legend.style.opacity = e.toFixed(3); legend.style.display = e > 0.01 ? "" : "none"; dirty = true; }
-  function setEnded(v) { ended = v; root.classList.toggle("is-ended", v); }
+  function applyDiag(k) { const e = k * k * (3 - 2 * k); if (k > 0) buildCirc(); circRoot.visible = e > 0.01; for (const m of circMats) m.opacity = m.userData.op * e; for (const d of diagMats) { d.m.color.copy(d.c0).lerp(d.tint, e); if (d.lit) d.m.emissive.copy(d.e0).lerp(d.et || d.tint, e); } legend.style.opacity = e.toFixed(3); legend.style.display = e > 0.01 ? "" : "none"; dirty = true; }
+  // at the end of the auto play the three buttons (take over, replay, more visuals) sit in a row just above the scene's name and words; back in their corner after
+  const endBar = document.createElement("div"); endBar.className = "v3-endbar";
+  const endBtns = [".v3-explore", ".v3-replay", ".v3-more"].map((sel) => root.querySelector(sel)).filter(Boolean), endHome = endBtns.map((b) => [b, b.parentNode, b.nextSibling]);
+  function setEnded(v) {
+    ended = v; root.classList.toggle("is-ended", v);
+    if (v) { ov.querySelector(".v3-txt").prepend(endBar); for (const b of endBtns) endBar.appendChild(b); }
+    else if (endBar.parentNode) { for (const [b, p, n] of endHome) p.insertBefore(b, n); endBar.remove(); }
+  }
   let poiFit = false;
   function fitPois() {                                      // the arrows reach the pool's nearest edge, measured on the surroundings once they are in
     if (poiFit || !ctxScene) return; poiFit = true; const pool = POIS[0], bl = []; ctxScene.traverse((o) => { if (o.isMesh && /^ctx_b_/.test(o.name)) bl.push(o); });

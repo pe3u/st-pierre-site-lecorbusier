@@ -4,7 +4,7 @@ import { mountTimelapse } from "./timelapse.js";
 // ---- notes for the 3D viewer: positions are Blender metres (real east = +Y); `face` is an outward direction used to hide notes turned away from the camera
 const NOTES = [
   { side: "ext", title: "Square to cone", pos: [12.5, 11, 33.6], text: "A square plan of about 25 m rises into a truncated cone some 33 m high. Le Corbusier traced the idea to his unbuilt Le Tremblay church of 1929 and to the hyperbolic forms of Chandigarh." },
-  { side: "ext", title: "Light cannons", pos: [12.1, 9.6, 33.4], text: "Instead of windows, tilted tubes pierce the roof. Tinted yellow and red, they catch the sun at set hours and throw coloured light across the concrete." },
+  { side: "ext", title: "Light cannons", pos: [12.1, 9.6, 33.4], text: "Instead of windows, tilted tubes pierce the roof. Tinted red, yellow and green, they catch the sun at set hours and throw coloured light across the concrete." },
   { side: "ext", title: "Orion, in concrete", pos: [12, 20.5, 18], face: [0, 1, 0.3], text: "On the east wall, small openings draw the constellation Orion. In the morning the sun passes through them and scatters points of light across the nave." },
   { side: "ext", title: "Bare concrete", pos: [24.6, 11, 9], face: [1, 0, 0], text: "Walls, floors, altar and pulpit are left as raw concrete. In this model the formwork joints are drawn as a 1.2 × 2.4 m grid, with chamfered 2 cm edges." },
   { side: "ext", title: "Four levels, linked by ramps", pos: [12.5, -4.2, 3.2], face: [0, -1, 0], text: "Sacristy, presbytery and catechism rooms sit below; the prayer space is above. Ramps tie the four levels to the hillside of the former quarry." },

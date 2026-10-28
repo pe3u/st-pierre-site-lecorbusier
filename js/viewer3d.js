@@ -1091,6 +1091,11 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   const mkTag = (html, cls, p, on, dy = 0, at = null, an = "translate(-50%, -50%)") => { const e = document.createElement("span"); e.className = cls; e.innerHTML = html; dimLayer.appendChild(e); tags.push({ e, p, on, dy, at, an }); return tags[tags.length - 1]; };
   const lvTxt = (z) => (Math.abs(z) < 0.005 ? "±" : z > 0 ? "+" : "−") + Math.abs(z).toFixed(2);          // a level in metres from the east entrance (Blender z = 0)
   for (const p of POIS) mkTag(`${p.name} <i>${p.dist < 1000 ? Math.round(p.dist / 5) * 5 : (p.dist / 1000).toFixed(1) + " k"} m</i>`, "v3-poi", p.at, () => enhanced && SCENES[sceneI].kind === "site" && p.k > 0.95, p.dy || 0);
+  // auto play: the hour beside the sun on its path (at the horizon once it has set)
+  const sunTag = mkTag("", "v3-suntime", new THREE.Vector3(), () => mode === "play" && cutK < 0.05, 0, (p) => {
+    p.copy(sunDisc.position); p.y = Math.max(p.y, 0.6); p.add(skyRoot.position);
+    const t = fmt(solar); if (sunTag.e.textContent !== t) sunTag.e.textContent = t;
+  }, "translate(14px, -50%)");
   for (const id of Object.keys(AREAS)) for (const [nm, a, x, y, z] of AREAS[id]) mkTag(`<b>${nm}</b><em>${a} m² · ${lvTxt(z)}</em>`, "v3-area", b2t(x, y, z), () => SCENES[sceneI].id === id && opened && cutK > 0.9 && !cutMoved && !hTween);
   // sections, after the usual drawings: floor-to-floor dimensions up the left side, level marks (a line across, a triangle and the level's name) on the right,
   // and the names of the spaces with their areas on the cut

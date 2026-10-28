@@ -485,7 +485,7 @@ export async function createViewer(root, opts) {
   }
   const dimV = new THREE.Vector3();
   function updateDims(r) {
-    const show = notesOn && !enhanced; dimRoot.visible = show;                 // no building dimensions over the site views
+    const show = notesOn && !enhanced && SCENES[sceneI].kind !== "cut"; dimRoot.visible = show;                 // no building dimensions over the site views
     if (!show) { for (const t of [tagW, tagD, tagH]) t.e.style.display = "none"; return; }
     let kn = 0, best = Infinity, left = [];                                  // the corner nearest the camera, and the screen x of each corner
     corners.forEach(([x, y], k) => { const w = b2t(x, y, 0); const d = w.distanceToSquared(camera.position); if (d < best) { best = d; kn = k; } left[k] = dimV.copy(w).project(camera).x; });
@@ -941,7 +941,7 @@ export async function createViewer(root, opts) {
         if (!vis) closeCard(); else { const x = ((tmp.x + 1) / 2) * r.width, y = ((1 - tmp.y) / 2) * r.height; placeCard(x, y); }
       }
     }
-    updateDims(r); updateTags(r); updateSec();
+    updateDims(r); updateSec(); updatePlanDims(); updateTags(r);
     for (const L of intLights) L.intensity = 3.5 * Math.max(0, (cutK - 0.3) / 0.7);
     fill.intensity = 1.6 * cutK; finalPass.uniforms.uExposure.value = EXPOSURE * (1 + 0.35 * cutK) * (1 + 0.7 * nightK); finalPass.uniforms.uBg.value.copy(bgNow);
     if (shadowStale) { renderer.shadowMap.needsUpdate = true; shadowStale = false; }
@@ -992,7 +992,7 @@ export async function createViewer(root, opts) {
   // and the controls for it appear). The captions are sample texts for now.
   const SCENES = [
     { id: "intro", name: "Église Saint-Pierre", kind: "intro", dur: 15, text: "Le Corbusier's last church, designed from 1960 for Firminy-Vert. Left unfinished in 1978, completed by José Oubrerie in 2006." },
-    { id: "site", name: "Gradients", kind: "site", dur: 10, text: "The church, the Maison de la Culture, the stadium, the swimming pool and the Unité d'habitation: the largest group of Le Corbusier's works in Europe." },
+    { id: "site", name: "Site: Site Le Corbusier", kind: "site", dur: 10, text: "The church, the Maison de la Culture, the stadium, the swimming pool and the Unité d'habitation: the largest group of Le Corbusier's works in Europe." },
     { id: "light", name: "Light", kind: "light", dur: 15, text: "The sun on the concrete shell through the day, until dusk. Inside, daylight enters through the star holes, the light cannons and coloured slits.", text2: "At dusk the lights inside come on and the church glows through its openings, a lantern over the lawns of Firminy-Vert." },
     { id: "p14", name: "Plan +14", kind: "cut", dur: 7, text: "The nave: about 429 m², open to the full height of the concrete shell, lit through the star holes of the east wall." },
     { id: "p55", name: "Plan +5.5", kind: "cut", dur: 7, text: "Exhibition rooms: about 259 m² in the square base beneath the nave, the floors first planned for the parish rooms." },
@@ -1020,33 +1020,86 @@ export async function createViewer(root, opts) {
   const capFor = () => { const S = SCENES[sceneI]; return lightPhase && S.text2 ? S.text2 : S.text; };
   // labels in the view: the other buildings of the site (site views) and the floor areas (plans)
   const tags = [];
-  const mkTag = (html, cls, p, on, dy = 0, at = null) => { const e = document.createElement("span"); e.className = cls; e.innerHTML = html; dimLayer.appendChild(e); tags.push({ e, p, on, dy, at }); };
+  const mkTag = (html, cls, p, on, dy = 0, at = null, an = "translate(-50%, -50%)") => { const e = document.createElement("span"); e.className = cls; e.innerHTML = html; dimLayer.appendChild(e); tags.push({ e, p, on, dy, at, an }); return tags[tags.length - 1]; };
   const lvTxt = (z) => (Math.abs(z) < 0.005 ? "±" : z > 0 ? "+" : "−") + Math.abs(z).toFixed(2);          // a level in metres from the east entrance (Blender z = 0)
   for (const p of POIS) mkTag(`${p.name} <i>${p.dist < 1000 ? Math.round(p.dist / 5) * 5 : (p.dist / 1000).toFixed(1) + " k"} m</i>`, "v3-poi", p.at, () => enhanced && SCENES[sceneI].kind === "site" && p.k > 0.95, p.dy || 0);
-  for (const id of Object.keys(AREAS)) for (const [nm, a, x, y, z] of AREAS[id]) mkTag(`${nm} <i>${a} m² · ${lvTxt(z)}</i>`, "v3-area", b2t(x, y, z), () => SCENES[sceneI].id === id && opened && cutK > 0.9 && !cutMoved && !hTween);
-  // sections: the floor levels beside the cut, with a dimension line up through them, and the names of the spaces on the cut
-  const LEVELS = [-1.3, 0, 1.4, 6.0, TOP], SPACES = [["Nave", 12.66, 11.09, 10.5], ["Exhibition rooms", 15.55, 7.58, 2.9], ["Lecture hall", 12.92, 9.29, 0.1]];
+  for (const id of Object.keys(AREAS)) for (const [nm, a, x, y, z] of AREAS[id]) mkTag(`<b>${nm}</b><em>${a} m² · ${lvTxt(z)}</em>`, "v3-area", b2t(x, y, z), () => SCENES[sceneI].id === id && opened && cutK > 0.9 && !cutMoved && !hTween);
+  // sections, after the usual drawings: floor-to-floor dimensions up the left side, level marks (a line across, a triangle and the level's name) on the right,
+  // and the names of the spaces with their areas on the cut
+  const FLOORS = [-1.3, 1.4, 6.0, TOP], LEVELS = [[-1.3, "Lecture hall"], [0, "Entrance"], [1.4, "Exhibition"], [6.0, "Nave"], [TOP, "Top of the shell"]];
+  const SPACES = [["Nave", 429, 12.66, 11.09, 10.5], ["Exhibition rooms", 259, 15.55, 7.58, 2.9], ["Lecture hall", 148, 12.92, 9.29, 0.1]];
   const secSide = new THREE.Vector3(), secOn = () => lens30 && opened && cutK > 0.9 && !angTween && SCENES[sceneI].kind === "cut";
   const sideNow = () => secSide.set(-cutDir.z, 0, cutDir.x);                                 // along the cut, towards the left of the screen
   const edgeL = () => { sideNow(); return secSide.x * 0.15 - secSide.z * 1.65 + 25.3 / 2; };      // the left side of the church on screen, measured along the cut
   const onCut = (v, along, y) => { sideNow(); return v.copy(cutDir).multiplyScalar(cutS + 0.05).addScaledVector(secSide, along).setY(y); };
-  for (const z of LEVELS) mkTag(lvTxt(z), "v3-lvl v3-lvsec", new THREE.Vector3(), () => secOn(), 0, (p) => onCut(p, edgeL() + 5.6, z));
-  for (const [nm, x, y, h] of SPACES) { const q = b2t(x, y, 0); mkTag(nm, "v3-area", new THREE.Vector3(), () => secOn() && !cutMoved, 0, (p) => onCut(p, sideNow().dot(q), h)); }
-  const secRoot = new THREE.Group(); secRoot.visible = false; scene.add(secRoot); let secLines = null, secKey = "";
+  for (let i = 0; i + 1 < FLOORS.length; i++) { const a = FLOORS[i], b = FLOORS[i + 1]; mkTag((b - a).toFixed(2), "v3-dim v3-sdim", new THREE.Vector3(), () => secOn(), 0, (p) => onCut(p, edgeL() + 2.9, (a + b) / 2), "translate(-100%, -50%)"); }
+  for (const [z, nm] of LEVELS) mkTag(`${lvTxt(z)} <i>${nm}</i>`, "v3-lvl v3-lvsec", new THREE.Vector3(), () => secOn(), 0, (p) => onCut(p, edgeL() - 25.3 - 3.4, z + 0.25), "translate(-100%, -100%)");
+  for (const [nm, a, x, y, h] of SPACES) { const q = b2t(x, y, 0); mkTag(`<b>${nm}</b><em>${a} m²</em>`, "v3-area", new THREE.Vector3(), () => secOn() && !cutMoved, 0, (p) => onCut(p, sideNow().dot(q), h)); }
+  const lvlMat = new THREE.LineDashedMaterial({ color: 0x1d1f22, dashSize: 0.3, gapSize: 0.45, depthTest: false, transparent: true, opacity: 0.6 });
+  const solidMat = new THREE.LineBasicMaterial({ color: 0x1d1f22, depthTest: false });
+  const secRoot = new THREE.Group(); secRoot.visible = false; scene.add(secRoot); let secKey = "";
+  const swapLines = (root, pts, mat, i) => { const old = root.children[i]; if (old) { root.remove(old); old.geometry.dispose(); } const l = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat); l.computeLineDistances(); l.renderOrder = 23; l.frustumCulled = false; root.add(l); if (i < root.children.length - 1) root.children.splice(i, 0, root.children.pop()); };
   function updateSec() {
     const on = notesOn && secOn(); secRoot.visible = on; if (!on) return;
     const key = cutAng.toFixed(3) + "/" + cutS.toFixed(2); if (key === secKey) return; secKey = key;
-    const L = edgeL(), pts = [], P = (along, y) => onCut(new THREE.Vector3(), L + along, y);
-    for (const z of LEVELS) pts.push(P(0.5, z), P(3.2, z));                  // a tick at each level
-    pts.push(P(1.9, LEVELS[0]), P(1.9, TOP));                                    // and the line up through them
-    if (secLines) { secRoot.remove(secLines); secLines.geometry.dispose(); }
-    secLines = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), dimMat); secLines.computeLineDistances(); secLines.renderOrder = 23; secLines.frustumCulled = false; secRoot.add(secLines);
+    const L = edgeL(), R = L - 25.3, P = (along, y) => onCut(new THREE.Vector3(), along, y), dim = [], lvl = [];
+    sideNow(); const tk = (p) => { const u = new THREE.Vector3(0, 0.35, 0).addScaledVector(secSide, 0.35); dim.push(p.clone().sub(u), p.clone().add(u)); };      // 45 degree ticks
+    dim.push(P(L + 2.4, FLOORS[0]), P(L + 2.4, TOP));                                       // the dimension line, its extension lines and ticks
+    for (const z of FLOORS) { dim.push(P(L + 0.4, z), P(L + 2.9, z)); tk(P(L + 2.4, z)); }
+    for (const [z] of LEVELS) {                                                             // each level: a dotted line across, then a small triangle standing on it
+      lvl.push(P(L, z), P(R - 4.6, z)); const t = P(R - 4, z), a = P(R - 3.55, z + 0.8), b = P(R - 4.45, z + 0.8);
+      dim.push(t, a, a, b, b, t.clone(), P(R - 4.9, z + 0.8), P(R - 3.1, z + 0.8));
+    }
+    swapLines(secRoot, dim, solidMat, 0); swapLines(secRoot, lvl, lvlMat, 1);
+  }
+  // plans: dimension strings along the two sides facing the camera (south and west) at the height of the cut, as in the drawings: the walls in the inner
+  // string, the overall size in the outer one. Measured on the model's concrete, just under the cut.
+  const walls = []; model.traverse((o) => { if (o.isMesh && o.material === concrete) walls.push(o); });
+  const wallRay = new THREE.Raycaster(), rN = new THREE.Vector3();
+  function castAll(o, d) {                                  // the wall faces that a level line crosses, as distances along it
+    if (!walls.length) return [];
+    const sd = concrete.side; concrete.side = THREE.DoubleSide; wallRay.set(o, d); wallRay.far = 160; const hits = wallRay.intersectObjects(walls, false); concrete.side = sd;
+    const out = []; for (const h of hits) { if (!h.face) continue; rN.copy(h.face.normal).transformDirection(h.object.matrixWorld); if (Math.abs(rN.dot(d)) < 0.6) continue; if (out.length && h.distance - out[out.length - 1] < 0.03) continue; out.push(h.distance); }
+    return out;
+  }
+  function chainAlong(o, d) {                               // the two outer faces and the middle of each wall between them
+    const f = castAll(o, d).filter((t) => Math.abs(t - 70) < 16), n = f.length; if (n < 2) return null;     // the church only (the line starts 70 m out from its middle)
+    const pts = [f[0]]; if (n % 2 === 0) for (let i = 2; i + 1 < n - 2; i += 2) { const t = f[i + 1] - f[i]; if (t > 0.08 && t < 0.9) pts.push((f[i] + f[i + 1]) / 2); }
+    pts.push(f[n - 1]);
+    const keep = [pts[0]]; for (let i = 1; i < pts.length; i++) { if (pts[i] - keep[keep.length - 1] > 0.9) keep.push(pts[i]); else if (i === pts.length - 1) keep[keep.length - 1] = pts[i]; }
+    return keep.length > 10 ? [keep[0], keep[keep.length - 1]] : keep;
+  }
+  const planOn = () => SCENES[sceneI].kind === "cut" && opened && horiz && cutK > 0.9 && !hTween;
+  const planRoot = new THREE.Group(); planRoot.visible = false; scene.add(planRoot); let planKey = "", planN = 0;
+  const planTags = []; for (let i = 0; i < 28; i++) planTags.push(mkTag("", "v3-dim v3-pdim", new THREE.Vector3(), () => planOn() && i < planN));
+  function updatePlanDims() {
+    const on = notesOn && planOn(); planRoot.visible = on; if (!on) return;
+    const key = cutH.toFixed(2); if (key === planKey) return; planKey = key; planN = 0;
+    const y = groundY + cutH - 0.4, c = new THREE.Vector3(0.15, y, -1.65), pts = [];
+    const label = (p, txt) => { if (planN >= planTags.length) return; const t = planTags[planN++]; t.p.copy(p); t.e.textContent = txt; };
+    const string = (o, d, nOut) => {                        // o: a point 1 m inside the face, far back along the line; d: along the face; nOut: out of the building
+      let ch = null; for (const k of [0, 0.6, 1.4]) { const c2 = chainAlong(o.clone().addScaledVector(nOut, -k), d); if (c2 && c2.length > 1 && (!ch || c2.length > ch.length || (c2.length === ch.length && c2[c2.length - 1] - c2[0] > ch[ch.length - 1] - ch[0] + 0.5))) { ch = c2; o = o.clone().addScaledVector(nOut, -k); } }     // a little deeper in where the line slips through an opening
+      if (!ch) return;
+      const P = (t, off) => o.clone().addScaledVector(d, t).addScaledVector(nOut, 1 + off), u = d.clone().add(nOut).multiplyScalar(0.3);
+      const tick = (p) => pts.push(p.clone().sub(u), p.clone().add(u));
+      const a = ch[0], b = ch[ch.length - 1];
+      pts.push(P(a, 1.6), P(b, 1.6), P(a, 3.2), P(b, 3.2));                                  // the inner and the outer string
+      for (const t of ch) { const end = t === a || t === b; pts.push(P(t, 0.3), P(t, end ? 3.5 : 1.9)); tick(P(t, 1.6)); }
+      tick(P(a, 3.2)); tick(P(b, 3.2));
+      if (ch.length > 2) for (let i = 0; i + 1 < ch.length; i++) label(P((ch[i] + ch[i + 1]) / 2, 2.15), (ch[i + 1] - ch[i]).toFixed(2));
+      label(P((a + b) / 2, 3.75), (b - a).toFixed(2));
+    };
+    const face = (o, d, sx) => { let m; for (let k = -8; k <= 8; k += 2) { const h = castAll(o.clone().addScaledVector(sx, k), d).find((t) => t > 54); if (h !== undefined && 70 - h < 16 && (m === undefined || h < m)) m = h; } return m; };     // the outermost face, over a few parallel lines
+    const fS = face(new THREE.Vector3(c.x + 70, y, c.z), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 1)), fW = face(new THREE.Vector3(c.x, y, c.z + 70), new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0));
+    if (fS !== undefined) string(new THREE.Vector3(c.x + 70 - fS - 1, y, c.z + 70), new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0));      // south side, west to east
+    if (fW !== undefined) string(new THREE.Vector3(c.x + 70, y, c.z + 70 - fW - 1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 1));      // west side, south to north
+    swapLines(planRoot, pts, solidMat, 0);
   }
   function updateTags(r) {
     for (const t of tags) {
       let vis = notesOn && t.on(); if (vis) { if (t.at) t.at(t.p); dimV.copy(t.p).project(camera); vis = dimV.z < 1 && Math.abs(dimV.x) < 1.1 && Math.abs(dimV.y) < 1.1; }
       t.e.style.display = vis ? "" : "none";
-      if (vis) t.e.style.transform = `translate(${((dimV.x + 1) / 2) * r.width}px, ${((1 - dimV.y) / 2) * r.height + t.dy}px) translate(-50%, -50%)`;
+      if (vis) t.e.style.transform = `translate(${((dimV.x + 1) / 2) * r.width}px, ${((1 - dimV.y) / 2) * r.height + t.dy}px) ${t.an}`;
     }
   }
   function enhance(on) { const site = SCENES[sceneI].kind === "site"; enhGoal = on && site ? 0.4 : 1; discGoal = on ? (site ? 1.6 : 2.6) : 1; enhanced = on; arcBold.visible = on; arc.visible = !on; if (on && site) poiRoot.visible = true; applySun(); dirty = true; }     // the sun's size and strength ease to the new goal (director); the arrows: site view only

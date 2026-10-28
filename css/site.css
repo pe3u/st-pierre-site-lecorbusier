@@ -528,3 +528,14 @@ h1 { cursor: pointer; }
 /* section levels: to the left of the cut */
 .v3-lvsec { margin: 0; font-size: 11px; color: var(--ink); }
 .v3[data-scene="site"] .v3-txt { background: rgba(255,255,255,.84); padding: 6px 8px 8px; margin: 0 -8px -6px; border-radius: 8px; }          /* the backing widens the box, not the lines: the text keeps its width */
+
+/* plans and sections, as in architectural drawings: room names in capitals with the area in a tag, dimension figures, level marks */
+.v3-area { text-align: center; }
+.v3-area b { display: block; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.v3-area em { display: inline-block; margin-top: 2px; padding: 0 5px; border-radius: 3px; font-style: normal; font-size: 10.5px; font-weight: 400; color: var(--ink); background: rgba(160,205,205,.55); text-shadow: none; }
+.v3-pdim, .v3-sdim { margin: 0; font-size: 10.5px; }
+.v3-sdim { padding-right: 4px; }
+.v3-lvsec { margin: 0; padding-right: 2px; font-size: 10.5px; color: var(--ink); text-align: right; }
+.v3-lvsec i { font-style: normal; color: var(--ink2); margin-left: 3px; }
+.v3.is-night .v3-area em { background: rgba(80,140,140,.6); color: #fff; }
+@media (max-width: 720px) { .v3-area b { font-size: 10px; } .v3-area em { font-size: 9.5px; } .v3-pdim, .v3-sdim, .v3-lvsec { font-size: 9.5px; } }

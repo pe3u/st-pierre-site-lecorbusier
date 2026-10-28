@@ -988,7 +988,7 @@ export async function createViewer(root, opts) {
   stage.appendChild(ov);
   const sceneEl = ov.querySelector(".v3-scene"), capEl = ov.querySelector(".v3-cap"), countEl = ov.querySelector(".v3-count i");
   const capRoom = () => Math.round((parseFloat(getComputedStyle(capEl).fontSize) || 14) * 1.2 * 3 + 36);     // room kept free for the caption (three lines) under the fitted views
-  const capSize = () => { capEl.style.fontSize = Math.max(11, stage.clientHeight / 36).toFixed(1) + "px"; };     // three lines of caption stay within a tenth of the view's height
+  const capSize = () => { capEl.style.fontSize = Math.max(11, Math.min(stage.clientHeight / 36, stage.clientWidth / 24)).toFixed(1) + "px"; };     // three lines of caption stay within a tenth of the view's height (and the texts within three lines on narrow screens)
   new ResizeObserver(capSize).observe(stage); capSize();
   let typeTimer = 0;
   function typeCap(txt) { clearInterval(typeTimer); capEl.textContent = ""; let i = 0; typeTimer = setInterval(() => { i += 1; capEl.textContent = txt.slice(0, i); if (i >= txt.length) clearInterval(typeTimer); }, Math.min(38, 2500 / txt.length)); }

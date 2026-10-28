@@ -474,13 +474,14 @@ footer .addr { margin-top: 0; }
 @keyframes v3-fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* "Tap to explore": a clear button at the top right while the viewer plays on its own */
-.v3-explore { position: absolute; right: 16px; top: 14px; z-index: 7; padding: 9px 16px; border-radius: 999px; border: 0; background: var(--ink); color: #fff; font: inherit; font-size: 12.5px; font-weight: 500; letter-spacing: .04em; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.18); animation: v3-pulse 2.4s ease-in-out infinite; }
+.v3-explore { position: absolute; right: 16px; top: 14px; z-index: 7; width: 84px; height: 72px; padding: 8px; border-radius: 10px; line-height: 1.25; text-align: center; white-space: normal; border: 0; background: var(--ink); color: #fff; font: inherit; font-size: 12.5px; font-weight: 500; letter-spacing: .04em; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.18); animation: v3-pulse 2.4s ease-in-out infinite; }
 .v3-explore:hover { background: #000; }
+.v3-explore { line-height: 1.25; }                      /* after the font shorthand, which resets it */
 .v3.is-night .v3-explore { background: #fff; color: #111; }
 .v3:not(.is-play) .v3-explore { display: none; }
-.v3.is-play .v3-facts { top: 60px; }
+.v3.is-play .v3-facts { top: 96px; }
 @keyframes v3-pulse { 50% { box-shadow: 0 4px 16px rgba(0,0,0,.18), 0 0 0 6px rgba(0,0,0,.06); } }
-@media (max-width: 900px) { .v3-explore { right: 10px; top: 10px; padding: 8px 14px; font-size: 12px; } }
+@media (max-width: 900px) { .v3-explore { right: 10px; top: 10px; width: 74px; height: 64px; font-size: 12px; } }
 
 /* every screen: the viewer (3D view, and the controls when they show) fits the window under the header; the height is set by viewer3d.js */
 .v3:not(.is-fs):not(:fullscreen) .v3-stage { height: var(--v3h, 70vh) !important; min-height: 0 !important; max-height: none !important; aspect-ratio: auto !important; }

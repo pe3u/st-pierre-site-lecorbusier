@@ -1066,7 +1066,8 @@ export async function createViewer(root, opts) {
     if (!coarse) return; controls.enabled = mode !== "play";
     renderer.domElement.style.touchAction = mode === "play" ? "pan-y" : (touchRatio >= 0.85 ? "none" : "pan-y");
   }
-  function setHint() { const h = root.querySelector(".v3-hint"); if (h) h.textContent = mode === "play" ? "tap to explore" : "drag to turn"; }
+  function setHint() { const h = root.querySelector(".v3-hint"); if (h) h.textContent = mode === "play" ? "" : "drag to turn"; }          // in auto play the Tap to explore button says it
+  root.querySelector(".v3-explore")?.addEventListener("click", () => takeOver());
   const PLAY_ICON = '<path d="M8 5l11 7-11 7z"/>', PAUSE_ICON = '<path d="M8 5v14M16 5v14"/>';
   function setMode(m) {
     mode = m; root.classList.toggle("is-play", m === "play"); root.classList.toggle("is-take", m === "take"); if (m === "take") root.classList.add("was-take");

@@ -1061,7 +1061,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   const SCENES = [
     { id: "intro", name: "Église Saint-Pierre", kind: "intro", dur: 15, text: "Le Corbusier's last church, designed from 1960 for Firminy-Vert. Left unfinished in 1978, completed by José Oubrerie in 2006." },
     { id: "site", name: "Site: Site Le Corbusier", kind: "site", dur: 10, text: "The church, the Maison de la Culture, the stadium, the swimming pool and the Unité d'habitation: the largest group of Le Corbusier's works in Europe." },
-    { id: "light", name: "Light", kind: "light", dur: 15, text: "The sun on the concrete shell through the day, until dusk. Inside, daylight enters through the star holes, the light cannons and coloured slits.", text2: "At dusk the lights inside come on and the church glows through its openings, a lantern over the lawns of Firminy-Vert." },
+    { id: "light", name: "Light", kind: "light", dur: 26, text: "The sun on the concrete shell from sunrise until dusk. Inside, daylight enters through the star holes, the light cannons and coloured slits.", text2: "At dusk the lights inside come on and the church glows through its openings, a lantern over the lawns of Firminy-Vert." },
     { id: "p14", name: "Plan +14", kind: "cut", dur: 7, text: "The nave: about 429 m², open to the full height of the concrete shell, lit through the star holes of the east wall." },
     { id: "p55", name: "Plan +5.5", kind: "cut", dur: 7, text: "Exhibition rooms: about 259 m² in the square base beneath the nave, the floors first planned for the parish rooms." },
     { id: "p2", name: "Plan +2", kind: "cut", dur: 7, text: "Lecture hall and exhibition space: about 148 m² on the lowest floor of the square base, under the exhibition rooms." },
@@ -1340,7 +1340,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     } else if (S.kind === "site" || S.kind === "light") {
       closeCut(); const v = siteView(); flyTo(v.p, v.t, 1600);
       if (S.kind === "site") easeSolar(10.5);
-      else { const rise = 12 - halfDay(), set = 12 + halfDay(); lightFrom = solar >= rise - 0.4 && solar <= set - 2 ? solar : rise - 0.4; easeSolar(lightFrom, 1.6); lightT = -1.6; lightRun = true; }   // the day runs on from the hour it is (or from dawn)
+      else { lightFrom = 12 - halfDay() - 0.25; easeSolar(lightFrom, 1.6); lightT = -1.6; lightRun = true; }   // the day starts again at sunrise
     } else { openCut(CUTS[S.id]); easeSolar(nightOn ? nightHour() : 12); siteLock = true; const v = sec ? secView() : planView(); if (!angTween) flyTo(v.p, v.t, 1600); syncCut(); }     // section to section: the camera turns with the cut
     booted = true; dirty = true;
   }
@@ -1356,10 +1356,10 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     { const want = S.kind === "site" && enhanced && poiT > 2.6 ? 1 : 0; if (diagK !== want) { diagK = want > diagK ? Math.min(1, diagK + dt / 1.2) : Math.max(0, diagK - dt / 0.8); applyDiag(diagK); } }     // the diagram comes in after the arrows
     if (Math.abs(sunK - enhGoal) > 0.002 || Math.abs(sunDisc.scale.x - discGoal) > 0.002) { const f = Math.min(1, dt * 2.5); sunK += (enhGoal - sunK) * f; sunDisc.scale.setScalar(sunDisc.scale.x + (discGoal - sunDisc.scale.x) * f); applySun(); }
     if (solarTween) { solarTween.t += dt / solarTween.s; const u = Math.min(1, solarTween.t), e = u * u * (3 - 2 * u); sunAz = solarTween.az0 * (1 - e); setSolar(solarTween.from + (solarTween.to - solarTween.from) * e); if (u >= 1) solarTween = null; }
-    if (lightRun) {                                         // the light study: the day runs on to night in 9 s, once (in auto play and from the buttons alike), slow at dawn and dusk
+    if (lightRun) {                                         // the light study: sunrise to night in 12 s, once (in auto play and from the buttons alike), slow at dawn and dusk; then the night holds about 12 s
       lightT += dt;
       if (lightT >= 0) {
-        const u = Math.min(1, lightT / 9), e = u * u * (3 - 2 * u); setSolar(lightFrom + (12 + halfDay() + 0.6 - lightFrom) * e);
+        const u = Math.min(1, lightT / 12), e = u * u * (3 - 2 * u); setSolar(lightFrom + (12 + halfDay() + 0.6 - lightFrom) * e);
         if (u >= 1) { lightRun = false; lightPhase = 1; typeCap(S.text2); if (mode === "play") { siteLock = false; enhance(false); flyHero(3000, startSpin); } }     // auto play: then back down to the spin
       }
     }

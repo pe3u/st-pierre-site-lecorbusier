@@ -214,42 +214,44 @@ export async function createViewer(root, opts) {
     }
   }
 
-  // the three light cannons, red, yellow and green, as in the church: in the cut views each throws its coloured light into the nave
-  // (a spot that washes the walls and the gallery, a faint shaft of light, the opening glowing). The model has the red and the yellow tubes;
-  // the green opening is added in the roof slab beside the yellow one, square to the slope like the other two
-  const CANNON_AX = new THREE.Vector3(0.55, 0.84, 0).normalize();      // the cannons' axis, up towards the south sun
-  const CANNONS = [   // colour; its opening (Blender m) and radius; a tube (the red and the yellow) or only a hole in the slab (the green); where its light lands (Blender m); spot half-angle; strength
-    { col: 0xff2a1a, at: [15.13, 2.59, 25.97], r: 0.78, tube: true, to: [13.0, 8.0, 0.0], ang: 0.15, k: 1.3 },
-    { col: 0xffc21a, at: [9.8, 9.55, 28.02], r: 0.72, tube: true, to: [2.8, 9.6, 14.3], ang: 0.13, k: 0.6 },
-    { col: 0x2ee05a, at: [15.2, 12.2, 27.12], r: 0.7, tube: false, to: [23.0, 12.2, 13.6], ang: 0.18, k: 0.9 },
+  // the three light cannons, red, yellow and green, as in the church: in the cut views each throws its coloured light into the nave straight down
+  // its tube's axis (a spot, a faint shaft of light, the glass glowing). The red and the yellow tubes stand in the roof; the green one, a box section,
+  // goes through the west wall. Measured on the model (Blender m): the tube's inner end, where its axis meets the church inside, the glass in the tube
+  const CANNONS = [
+    { col: 0xff2a1a, at: [15.13, 2.59, 25.97], to: [3.07, 2.59, 7.6], r: 0.8, glass: { c: [16.5, 2.6, 27.9], n: [0.549, 0, 0.836], r: 0.78 }, k: 1.3 },
+    { col: 0xffc21a, at: [9.82, 9.55, 28.02], to: [4.31, 9.55, 19.98], r: 0.6, glass: { c: [12.1, 9.6, 30.3], n: [0.565, 0, 0.825], r: 0.62 }, k: 0.35 },
+    { col: 0x2ee05a, at: [6.84, 1.33, 13.65], to: [13.31, 22.52, 5.51], r: 0.75, glass: { c: [5.84, -1.9, 14.91], n: [0, 1, 0], w: 1.3, h: 2.02 }, k: 1.4 },
   ];
   const cannonFx = [], noAO = [];
+  const bdir = (x, y, z) => new THREE.Vector3(x, z, -y).normalize();     // a Blender direction in the viewer's axes
   for (const cn of CANNONS) {
-    const mouth = b2t(...cn.at);
-    // the glass at the end of the opening, glowing, brighter at its core: up inside the tube, or just under the ceiling
-    const geo = new THREE.CircleGeometry(cn.r, 40), cc = new THREE.Color(cn.col), core = cc.clone().lerp(new THREE.Color(0xffffff), 0.55), cols = [];
-    for (let i = 0; i < geo.attributes.position.count; i++) { const c = i === 0 ? core : cc; cols.push(c.r, c.g, c.b); }
+    // the glass, glowing, brighter at its core
+    const gl = cn.glass, geo = gl.r ? new THREE.CircleGeometry(gl.r, 40) : new THREE.PlaneGeometry(gl.w, gl.h, 8, 12), gp = geo.attributes.position;
+    const cc = new THREE.Color(cn.col), core = cc.clone().lerp(new THREE.Color(0xffffff), 0.55), cols = [], col = new THREE.Color(); let far = 0;
+    for (let i = 0; i < gp.count; i++) far = Math.max(far, Math.hypot(gp.getX(i), gp.getY(i)));
+    for (let i = 0; i < gp.count; i++) { col.copy(core).lerp(cc, Math.min(1, 1.4 * Math.hypot(gp.getX(i), gp.getY(i)) / far)); cols.push(col.r, col.g, col.b); }
     geo.setAttribute("color", new THREE.Float32BufferAttribute(cols, 3));
     const gm = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); gm.color.setScalar(1.3); gm.clipShadows = true;
-    const disc = new THREE.Mesh(geo, gm); disc.position.copy(mouth).addScaledVector(CANNON_AX, cn.tube ? 0.5 : -0.04); disc.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), CANNON_AX); scene.add(disc);
+    const glass = new THREE.Mesh(geo, gm); glass.position.copy(b2t(...gl.c)); glass.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), bdir(...gl.n)); scene.add(glass);
     glowMats.push({ mat: gm, base: gm.color.clone() });
-    const to = b2t(...cn.to), dir = to.clone().sub(mouth), len = dir.length(); dir.normalize();
-    const L = new THREE.SpotLight(cn.col, 0, len * 1.25, cn.ang, 0.7, 2); L.position.copy(mouth); L.target.position.copy(to); scene.add(L, L.target);
+    // the light, straight down the tube's axis from its inner end to where it lands, spreading a little
+    const mouth = b2t(...cn.at), to = b2t(...cn.to), dir = to.clone().sub(mouth), len = dir.length(), ang = Math.atan(1.5 * cn.r / len) + 0.04; dir.normalize();
+    const L = new THREE.SpotLight(cn.col, 0, len * 1.3, ang, 0.6, 2); L.position.copy(mouth); L.target.position.copy(to); scene.add(L, L.target);
     // the shaft: an open cone from the opening along the beam, fading down its length and towards its edges, added onto what lies behind
-    const r1 = cn.r, cg = new THREE.CylinderGeometry(r1, r1 + Math.tan(cn.ang) * len, len, 32, 1, true); cg.translate(0, -len / 2, 0);
+    const cg = new THREE.CylinderGeometry(cn.r, cn.r + Math.tan(ang) * len, len, 32, 1, true); cg.translate(0, -len / 2, 0);
     const sm = new THREE.MeshBasicMaterial({ color: cn.col, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
     sm.onBeforeCompile = (sh) => {
       sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying float vAlong; varying vec3 vNv; varying vec3 vVp;")
         .replace("#include <begin_vertex>", `#include <begin_vertex>
 vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal); vVp = -(modelViewMatrix * vec4(position, 1.0)).xyz;`);
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vAlong; varying vec3 vNv; varying vec3 vVp;")
-        .replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.a *= pow(1.0 - clamp(vAlong, 0.0, 1.0), 1.6) * pow(abs(dot(normalize(vNv), normalize(vVp))), 1.5);");
+        .replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.a *= pow(1.0 - clamp(vAlong, 0.0, 1.0), 1.2) * pow(abs(dot(normalize(vNv), normalize(vVp))), 1.5);");
     };
     sm.customProgramCacheKey = () => "shaft" + len.toFixed(2);
     const shaft = new THREE.Mesh(cg, sm); shaft.position.copy(mouth); shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir); shaft.renderOrder = 8; shaft.frustumCulled = false; shaft.visible = false; scene.add(shaft); noAO.push(shaft);
     cannonFx.push({ L, sm, shaft, k: cn.k });
   }
-  function cannonLight(f) { for (const c of cannonFx) { c.L.intensity = 900 * c.k * f; c.sm.opacity = 0.16 * f; c.shaft.visible = f > 0.001; } }      // the spots stay in the scene (switching lights on and off would rebuild every shader)
+  function cannonLight(f) { for (const c of cannonFx) { c.L.intensity = 900 * c.k * f; c.sm.opacity = 0.2 * f; c.shaft.visible = f > 0.001; } }      // the spots stay in the scene (switching lights on and off would rebuild every shader)
 
   // architectural facade lighting: one wide flood light per facade, 46 m out from the church, on the ground and aimed up the wall; these are real lights, so they cast shadows (reveals, balconies, the ramp)
   const flood = [];
@@ -919,6 +921,25 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   let last = performance.now(), visible = true;
   new IntersectionObserver((e) => { visible = e[0].isIntersecting; }).observe(stage);
   const camDir = new THREE.Vector3();
+  // the camera you see follows the pose the movements set (the spin, the flights, the framed views, a drag) through a critically damped spring,
+  // so wherever one movement hands over to another the speed carries on and changes smoothly instead of jumping; the movements run on the true pose
+  const camS = { p: new THREE.Vector3(), t: new THREE.Vector3(), vp: new THREE.Vector3(), vt: new THREE.Vector3(), cam: null, rp: new THREE.Vector3(), rq: new THREE.Quaternion() };
+  const sdA = new THREE.Vector3(), sdB = new THREE.Vector3();
+  let dragging = false;
+  controls.addEventListener("start", () => { dragging = true; }); controls.addEventListener("end", () => { dragging = false; });
+  function spring(cur, vel, goal, tau, dt) {                 // SmoothDamp: critically damped, no overshoot
+    const w = 2 / tau, x = w * dt, e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+    sdA.copy(cur).sub(goal); sdB.copy(vel).addScaledVector(sdA, w).multiplyScalar(dt);
+    vel.addScaledVector(sdB, -w).multiplyScalar(e); cur.copy(goal).add(sdA.add(sdB).multiplyScalar(e));
+  }
+  function followCam(dt) {                                    // true while the shown camera is still catching up
+    if (camS.cam !== camera) { camS.cam = camera; camS.p.copy(camera.position); camS.t.copy(controls.target); camS.vp.set(0, 0, 0); camS.vt.set(0, 0, 0); return false; }
+    const tau = dragging ? 0.08 : 0.3;                       // a hand on the model: it follows closely
+    spring(camS.p, camS.vp, camera.position, tau, dt); spring(camS.t, camS.vt, controls.target, tau, dt);
+    return camS.vp.lengthSq() + camS.vt.lengthSq() > 1e-6 || camS.p.distanceToSquared(camera.position) + camS.t.distanceToSquared(controls.target) > 1e-6;
+  }
+  function showCam() { camS.rp.copy(camera.position); camS.rq.copy(camera.quaternion); camera.position.copy(camS.p); camera.lookAt(camS.t); camera.updateMatrixWorld(); }
+  function rawCam() { camera.position.copy(camS.rp); camera.quaternion.copy(camS.rq); camera.updateMatrixWorld(); }
   function frame(now) {
     if (!visible && !renderer.xr.isPresenting) { last = now; return; }
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -965,8 +986,10 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
       } else { sunAcc = null; sunDone = false; }
       camAzPrev = caz; }
     director(dt);
-    if (!(moved || tween || cutTween || controls.autoRotate || dirty || now < dirtyUntil)) return;     // nothing changed: this frame is skipped
+    const settling = followCam(dt);
+    if (!(moved || tween || cutTween || controls.autoRotate || dirty || settling || now < dirtyUntil)) return;     // nothing changed: this frame is skipped
     dirty = false;
+    showCam();
     updateCompass();
     camera.getWorldDirection(camDir);
     const r = stage.getBoundingClientRect();
@@ -991,6 +1014,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     if (shadowStale) { renderer.shadowMap.needsUpdate = true; shadowStale = false; }
     if (lite) { renderer.toneMappingExposure = EXPOSURE * 0.36 * (1 + 0.35 * cutK) * (1 + 0.7 * nightK); renderer.render(scene, camera); } else composer.render();
     if (lite) drawGhost();
+    rawCam();
     if (lite && prCap > 1 && (tween || controls.autoRotate)) {          // frame-rate guard while the camera is animating
       if (lastR) { perfSum += now - lastR; perfN++; } lastR = now;
       if (perfN === 90) { if (perfSum / perfN > 40) { prCap = 1; resize(); } perfN = 0; perfSum = 0; }
@@ -1169,14 +1193,14 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
       const V = (p) => [p[0] + M.x, -p[1] + M.z];                      // Blender plan (x, y) to the viewer's (x, z)
       const P3 = (x, z) => [x, Y(x, z), z];
       const mk = (col, op) => { const m = new THREE.MeshBasicMaterial({ color: shown(col), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -16 }); m.userData.op = op; circMats.push(m); return m; };
-      const hatch = (col, op, hc, only) => {                  // hatching in world space, at 45 degrees, every 5 m; only: the hatching alone, the ground showing between
+      const hatch = (col, op, hc, only) => {                  // hatching in world space, at 45 degrees, fine lines every 3.6 m; only: the hatching alone, the ground showing between
         const m = mk(only ? hc : col, op);
         m.onBeforeCompile = (sh) => {
           sh.uniforms.uHc = { value: shown(hc) };
           sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec2 vHW;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvHW = (modelMatrix * vec4(position, 1.0)).xz;");
           sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vHW; uniform vec3 uHc;").replace("#include <color_fragment>", `#include <color_fragment>
-  float hu = dot(vHW, vec2(0.7071, 0.7071)) / 5.0, hw = fwidth(hu);
-  float hs = mix(1.0 - smoothstep(0.16 - hw, 0.16 + hw, abs(fract(hu) - 0.5)), 0.32, smoothstep(0.25, 0.5, hw));      // the stripes, evened out to their mean where they get too fine to draw
+  float hu = dot(vHW, vec2(0.7071, 0.7071)) / 3.6, hw = fwidth(hu);
+  float hs = mix(1.0 - smoothstep(0.08 - hw, 0.08 + hw, abs(fract(hu) - 0.5)), 0.16, smoothstep(0.25, 0.5, hw));      // the stripes, evened out to their mean where they get too fine to draw
   ${only ? "diffuseColor.a *= hs;" : "diffuseColor.rgb = mix(diffuseColor.rgb, uHc, hs);"}`);
         };
         m.customProgramCacheKey = () => "hatch" + (only ? "o" : "f");
@@ -1300,7 +1324,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     tween = { t: 0, ms, sph0: s0, sph1: s1, p0: camera.position.clone(), t0: controls.target.clone(), p1: heroPos().clone(), t1: HT.clone(), ease, easeA: ease, then };
   }
   onResize = () => { if (siteLock) dirty = true; };          // a new size: the next frame refits the top view
-  const startSpin = () => { if (mode !== "play") return; controls.autoRotate = true; spinSun = true; spinMul = 1; spinK = 1; };
+  const startSpin = () => { if (mode !== "play") return; controls.autoRotate = true; spinSun = true; spinMul = 1; spinK = 0; };      // the spin eases in from rest
   function enterScene(i, zoom = false) {                    // zoom: the intro with its flight in (the Play button)
     sceneI = i; sceneT = 0; lightPhase = 0; lightRun = false; cutMoved = false; solarTween = null; const S = SCENES[i], play = mode === "play";
     root.dataset.scene = S.kind; sceneEl.textContent = S.name; typeCap(S.text);

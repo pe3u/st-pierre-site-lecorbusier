@@ -216,10 +216,10 @@ export async function createViewer(root, opts) {
 
   // the three light cannons, red, yellow and green, as in the church: in the cut views each throws its coloured light into the nave straight down
   // its tube's axis (a spot, a faint shaft of light, the glass glowing). The red and the yellow tubes stand in the roof; the green one, a box section,
-  // goes through the west wall. Measured on the model (Blender m): the tube's inner end, where its axis meets the church inside, the glass in the tube
+  // goes through the west wall. Measured on the model (Blender m; the round tubes fitted as cylinders): the centre of the tube's inner end, where its axis meets the church inside, the glass on the axis
   const CANNONS = [
-    { col: 0xff2a1a, at: [15.13, 2.59, 25.97], to: [3.07, 2.59, 7.6], r: 0.8, glass: { c: [16.5, 2.6, 27.9], n: [0.549, 0, 0.836], r: 0.78 }, k: 1.3 },
-    { col: 0xffc21a, at: [9.82, 9.55, 28.02], to: [4.31, 9.55, 19.98], r: 0.6, glass: { c: [12.1, 9.6, 30.3], n: [0.565, 0, 0.825], r: 0.62 }, k: 0.35 },
+    { col: 0xff2a1a, at: [14.95, 2.59, 26.08], to: [2.83, 2.59, 7.6], r: 0.84, glass: { c: [16.05, 2.59, 27.75], n: [0.549, 0, 0.836], r: 0.8 }, k: 1.3 },
+    { col: 0xffc21a, at: [10.73, 9.55, 28.02], to: [3.55, 9.55, 17.08], r: 0.95, glass: { c: [12.16, 9.55, 30.19], n: [0.549, 0, 0.836], r: 0.9 }, k: 0.6 },
     { col: 0x2ee05a, at: [6.84, 1.33, 13.65], to: [13.31, 22.52, 5.51], r: 0.75, glass: { c: [5.84, -1.9, 14.91], n: [0, 1, 0], w: 1.3, h: 2.02 }, k: 1.4 },
   ];
   const cannonFx = [], noAO = [];

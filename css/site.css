@@ -582,3 +582,6 @@ h1 { cursor: pointer; }
 /* auto play: the hour beside the sun on its path */
 .v3-suntime { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: #9a6f00; text-shadow: 0 0 3px rgba(255,255,255,.95), 0 0 7px rgba(255,255,255,.85); pointer-events: none; }
 .v3.is-night .v3-suntime { color: #ffd21a; text-shadow: 0 0 4px rgba(0,0,0,.75); }
+
+/* the parking signs at the diagram's half strength (colours with alpha: the fade-in animation sets the element's own opacity) */
+.v3-pk { background: rgba(56,147,210,.5); color: rgba(29,39,64,.55); box-shadow: 0 0 0 1.5px rgba(255,255,255,.5); }

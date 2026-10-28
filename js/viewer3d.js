@@ -146,7 +146,7 @@ export async function createViewer(root, opts) {
         sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vGP;");
       };
       mat.customProgramCacheKey = () => "ground17" + (lawn ? "c" : "");
-      o.castShadow = false; o.receiveShadow = true; o.userData.ground = true; o.renderOrder = -1; mat.polygonOffset = true; mat.polygonOffsetFactor = -6; mat.polygonOffsetUnits = -12;     // above the flat layers of the surroundings
+      o.castShadow = false; o.receiveShadow = true; o.userData.ground = true; o.userData.road = /road/.test(nm); o.renderOrder = -1; mat.polygonOffset = true; mat.polygonOffsetFactor = -6; mat.polygonOffsetUnits = -12;     // above the flat layers of the surroundings
     } else if (group === "glow") {
       const c = (src.emissive && src.emissive.getHex() > 0 ? src.emissive : src.color).clone();
       const k = 1.0 / Math.max(c.r, c.g, c.b, 1e-3); c.multiplyScalar(Math.min(k, 1.0));
@@ -288,6 +288,10 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   const groundMeshes = []; model.traverse((o) => { if (o.userData.ground) groundMeshes.push(o); });
   const ray = new THREE.Raycaster();
   const groundAt = (vx, vz) => { ray.set(new THREE.Vector3(vx, 80, vz), new THREE.Vector3(0, -1, 0)); const h = ray.intersectObjects(groundMeshes, false)[0]; return h ? h.point.y : null; };
+  const groundHit = (vx, vz) => {                         // the ground's height there, and whether its top surface is one of the model's roads (paving laid over a road counts as paving)
+    ray.set(new THREE.Vector3(vx, 80, vz), new THREE.Vector3(0, -1, 0)); const hs = ray.intersectObjects(groundMeshes, false); if (!hs.length) return null;
+    return { y: hs[0].point.y, road: hs.some((h) => h.distance - hs[0].distance < 0.03 && h.object.userData.road) };
+  };
   const cyl = (r0, r1, len, sx = 1, sz = 1) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, len, 9, 1), blk); m.scale.set(sx, 1, sz); return m; };
   function stick(h, kind) {
     const root = new THREE.Group(), hip = new THREE.Group(); hip.position.y = h * 0.5; root.add(hip);
@@ -337,7 +341,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   const cityFolk = []; let citySink = null;                                              // people standing in the surroundings: they go with the City button
   function stander(bx, by, bz, h, kind, mode, target, phase, ghost = false, view = null) {
     const fg = stick(h, kind), v = b2t(bx, by, bz); fg.root.position.copy(v); scene.add(fg.root); if (citySink) citySink.push(fg.root);
-    const tv = target ? b2t(target[0], target[1], target[2] || 0) : CH;
+    const tv = target ? b2t(target[0], target[1], target[2] || 0) : CH; fg.root.userData.partner = target ? tv : null;
     const vw = view ? b2t(view[0], view[1], view[2] || 0) : CH;                           // what they look towards (the church, or the star wall inside)
     let yaw0 = yawTo(v.x, v.z, tv.x, tv.z) + (mode === "talk" ? 0.35 * (phase % 1 > 0.5 ? 1 : -1) : 0);
     if (mode === "chat") { const yc = yawTo(v.x, v.z, vw.x, vw.z); yaw0 = yaw0 + 0.7 * wrap(yc - yaw0); }       // the body turns most of the way towards the church; the head shares the look between the partner and the church
@@ -461,17 +465,22 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     mat.clipShadows = true;
     const byKind = shapes.map(() => []); for (const t of trees) byKind[t[2]].push(t);
     const group = new THREE.Group(), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), pv = new THREE.Vector3(), sv = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+    let offRoad = 0;
     shapes.forEach((geo, k) => {
-      const list = byKind[k]; if (!list.length) return;
-      const im = new THREE.InstancedMesh(geo, mat, list.length); im.frustumCulled = false; im.castShadow = false; im.receiveShadow = false; im.renderOrder = 4;
-      list.forEach((t, i) => {
+      const list = byKind[k].map((t) => {                    // where each one stands; none on the model's roads (the map's roads were kept clear when the trees were placed)
         const v = b2t(t[0], t[1], 0); let y = -2.9;
-        if (Math.hypot(v.x - 0.25, v.z + 1.73) < 95) { const gy = groundAt(v.x, v.z); if (gy !== null) y = gy; }
+        if (Math.hypot(v.x - 0.25, v.z + 1.73) < 95) { const g = groundHit(v.x, v.z); if (g) { if (g.road) { offRoad++; return null; } y = g.y; } }
+        return { t, v, y };
+      }).filter(Boolean);
+      if (!list.length) return;
+      const im = new THREE.InstancedMesh(geo, mat, list.length); im.frustumCulled = false; im.castShadow = false; im.receiveShadow = false; im.renderOrder = 4;
+      list.forEach(({ t, v, y }, i) => {
         const h = t[3], w = h * (k === 6 ? 1.0 : 0.8 + 0.05 * ((t[0] * 7 + t[1] * 13) % 5));
         q.setFromAxisAngle(up, ((t[0] * 3.1 + t[1] * 1.7) % 6.283)); pv.set(v.x, y, v.z); sv.set(w, h, w); m4.compose(pv, q, sv); im.setMatrixAt(i, m4); im.setColorAt(i, shades[t[4] % 3]);
       });
       im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; group.add(im);
     });
+    if (offRoad) console.info("trees kept off the roads:", offRoad);
     ctxRoot.add(group); markDirty();
   }).catch((e) => console.warn("trees not loaded", e));
 
@@ -502,7 +511,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   // corner at the left of the building on screen. The height in metres from the upper terrace (east entrance, Blender z = 0).
   const SQ0 = 0.1, SQ1 = 25.4, OFF = 3.0, TOP = box.max.y;                  // the square base in Blender metres; viewer y = Blender z
   const dimRoot = new THREE.Group(); scene.add(dimRoot);
-  const dimMat = new THREE.LineDashedMaterial({ color: 0x3c3f43, dashSize: 0.22, gapSize: 0.38, depthTest: false, transparent: true, opacity: 0.85 });      // dotted
+  const dimMat = new THREE.LineDashedMaterial({ color: 0x3c3f43, dashSize: 0.16, gapSize: 0.3, depthTest: false, transparent: true, opacity: 0.7 });      // fine dots
   const dimLayer = document.createElement("div"); dimLayer.className = "v3-dims"; stage.appendChild(dimLayer);
   const dimTag = (txt, cls) => { const e = document.createElement("span"); e.className = cls; e.textContent = txt; dimLayer.appendChild(e); return { e, p: new THREE.Vector3() }; };
   const tagW = dimTag((SQ1 - SQ0).toFixed(1) + " m", "v3-dim"), tagD = dimTag((SQ1 - SQ0).toFixed(1) + " m", "v3-dim"), tagH = dimTag(TOP.toFixed(1) + " m", "v3-dim v3-dim-h");
@@ -550,6 +559,26 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     renderer.autoClear = ac; renderer.clippingPlanes = cp;
   }
 
+  {                                                                  // no one stands on a road: a pair on one steps together to the nearest free spot (paving or lawn, within 8 m), or goes
+    const free = (x, z, y0) => { const g = groundHit(x, z); return g && !g.road && Math.abs(g.y - y0) < 1.2 ? g : null; };
+    const onRoad = (p) => { const g = groundHit(p.x, p.z); return !!(g && g.road); };
+    const done = new Set(); let moved = 0, gone = 0;
+    for (const r of [...cityFolk]) {
+      if (done.has(r)) continue;
+      const pt = r.userData.partner, mate = pt ? cityFolk.find((o) => o !== r && o.position.distanceTo(pt) < 0.05) : null, pair = mate ? [r, mate] : [r];
+      pair.forEach((o) => done.add(o));
+      if (!pair.some((o) => onRoad(o.position))) continue;
+      let off = null;
+      search: for (const rad of [1.5, 3, 4.5, 6, 8]) for (let k = 0; k < 12; k++) {
+        const dx = Math.cos(k * Math.PI / 6) * rad, dz = Math.sin(k * Math.PI / 6) * rad;
+        const gs = pair.map((o) => free(o.position.x + dx, o.position.z + dz, o.position.y)); if (gs.every(Boolean)) { off = { dx, dz, gs }; break search; }
+      }
+      if (off) {                                       // the partner's spot moves with them (it is what each one turns and looks to)
+        pair.forEach((o, i) => { o.position.set(o.position.x + off.dx, off.gs[i].y, o.position.z + off.dz); if (o.userData.partner) { o.userData.partner.x += off.dx; o.userData.partner.z += off.dz; } }); moved += pair.length;
+      } else { pair.forEach((o) => { o.removeFromParent(); cityFolk.splice(cityFolk.indexOf(o), 1); }); gone += pair.length; }
+    }
+    if (moved || gone) console.info("people off the roads: moved", moved, "left out", gone);
+  }
   for (const an of anims) an(9.0);                                   // figures are posed once and stay still: no per-frame animation
   {                                                                  // ...so their ~500 little meshes become ONE (and the window lamps one): hundreds of draw calls fewer
     scene.updateMatrixWorld(true);
@@ -1061,7 +1090,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   const SCENES = [
     { id: "intro", name: "Église Saint-Pierre", kind: "intro", dur: 15, text: "Le Corbusier's last church, designed from 1960 for Firminy-Vert. Left unfinished in 1978, completed by José Oubrerie in 2006." },
     { id: "site", name: "Site: Site Le Corbusier", kind: "site", dur: 10, text: "The church, the Maison de la Culture, the stadium, the swimming pool and the Unité d'habitation: the largest group of Le Corbusier's works in Europe." },
-    { id: "light", name: "Light", kind: "light", dur: 26, text: "The sun on the concrete shell from sunrise until dusk. Inside, daylight enters through the star holes, the light cannons and coloured slits.", text2: "At dusk the lights inside come on and the church glows through its openings, a lantern over the lawns of Firminy-Vert." },
+    { id: "light", name: "Light", kind: "light", dur: 18.6, text: "The sun on the concrete shell from sunrise until dusk. Inside, daylight enters through the star holes, the light cannons and coloured slits.", text2: "At dusk the lights inside come on and the church glows through its openings, a lantern over the lawns of Firminy-Vert." },
     { id: "p14", name: "Plan +14", kind: "cut", dur: 7, text: "The nave: about 429 m², open to the full height of the concrete shell, lit through the star holes of the east wall." },
     { id: "p55", name: "Plan +5.5", kind: "cut", dur: 7, text: "Exhibition rooms: about 259 m² in the square base beneath the nave, the floors first planned for the parish rooms." },
     { id: "p2", name: "Plan +2", kind: "cut", dur: 7, text: "Lecture hall and exhibition space: about 148 m² on the lowest floor of the square base, under the exhibition rooms." },
@@ -1109,21 +1138,22 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   for (const [z, nm] of LEVELS) mkTag(`${lvTxt(z)} <i>${nm}</i>`, "v3-lvl v3-lvsec", new THREE.Vector3(), () => secOn(), 0, (p) => onCut(p, edgeL() - 25.3 - 3.4, z + 0.25), "translate(-100%, -100%)");
   for (const [nm, a, x, y, h] of SPACES) { const q = b2t(x, y, 0); mkTag(`<b>${nm}</b><em>${a} m²</em>`, "v3-area", new THREE.Vector3(), () => secOn() && !cutMoved, 0, (p) => onCut(p, sideNow().dot(q), h)); }
   const lvlMat = new THREE.LineDashedMaterial({ color: 0x1d1f22, dashSize: 0.3, gapSize: 0.45, depthTest: false, transparent: true, opacity: 0.6 });
-  const solidMat = new THREE.LineBasicMaterial({ color: 0x1d1f22, depthTest: false });
+  const dotMat = new THREE.LineDashedMaterial({ color: 0x2c2f33, dashSize: 0.16, gapSize: 0.2, depthTest: false, transparent: true, opacity: 0.9 });       // dimension lines: fine dots
+  const markMat = new THREE.LineBasicMaterial({ color: 0x2c2f33, depthTest: false, transparent: true, opacity: 0.9 });                                         // their ticks and the level marks: thin, solid
   const secRoot = new THREE.Group(); secRoot.visible = false; scene.add(secRoot); let secKey = "";
   const swapLines = (root, pts, mat, i) => { const old = root.children[i]; if (old) { root.remove(old); old.geometry.dispose(); } const l = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat); l.computeLineDistances(); l.renderOrder = 23; l.frustumCulled = false; root.add(l); if (i < root.children.length - 1) root.children.splice(i, 0, root.children.pop()); };
   function updateSec() {
     const on = notesOn && secOn(); secRoot.visible = on; if (!on) return;
     const key = cutAng.toFixed(3) + "/" + cutS.toFixed(2); if (key === secKey) return; secKey = key;
-    const L = edgeL(), R = L - 25.3, P = (along, y) => onCut(new THREE.Vector3(), along, y), dim = [], lvl = [];
-    sideNow(); const tk = (p) => { const u = new THREE.Vector3(0, 0.35, 0).addScaledVector(secSide, 0.35); dim.push(p.clone().sub(u), p.clone().add(u)); };      // 45 degree ticks
+    const L = edgeL(), R = L - 25.3, P = (along, y) => onCut(new THREE.Vector3(), along, y), dim = [], lvl = [], mk = [];
+    sideNow(); const tk = (p) => { const u = new THREE.Vector3(0, 0.35, 0).addScaledVector(secSide, 0.35); mk.push(p.clone().sub(u), p.clone().add(u)); };      // 45 degree ticks
     dim.push(P(L + 2.4, FLOORS[0]), P(L + 2.4, TOP));                                       // the dimension line, its extension lines and ticks
     for (const z of FLOORS) { dim.push(P(L + 0.4, z), P(L + 2.9, z)); tk(P(L + 2.4, z)); }
     for (const [z] of LEVELS) {                                                             // each level: a dotted line across, then a small triangle standing on it
       lvl.push(P(L, z), P(R - 4.6, z)); const t = P(R - 4, z), a = P(R - 3.55, z + 0.8), b = P(R - 4.45, z + 0.8);
-      dim.push(t, a, a, b, b, t.clone(), P(R - 4.9, z + 0.8), P(R - 3.1, z + 0.8));
+      mk.push(t, a, a, b, b, t.clone(), P(R - 4.9, z + 0.8), P(R - 3.1, z + 0.8));
     }
-    swapLines(secRoot, dim, solidMat, 0); swapLines(secRoot, lvl, lvlMat, 1);
+    swapLines(secRoot, dim, dotMat, 0); swapLines(secRoot, lvl, lvlMat, 1); swapLines(secRoot, mk, markMat, 2);
   }
   // plans: dimension strings along the two sides facing the camera (south and west) at the height of the cut, as in the drawings: the walls in the inner
   // string, the overall size in the outer one. Measured on the model's concrete, just under the cut.
@@ -1148,13 +1178,13 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   function updatePlanDims() {
     const on = notesOn && planOn(); planRoot.visible = on; if (!on) return;
     const key = cutH.toFixed(2); if (key === planKey) return; planKey = key; planN = 0;
-    const y = groundY + cutH - 0.4, c = new THREE.Vector3(0.15, y, -1.65), pts = [];
+    const y = groundY + cutH - 0.4, c = new THREE.Vector3(0.15, y, -1.65), pts = [], mk = [];
     const label = (p, txt) => { if (planN >= planTags.length) return; const t = planTags[planN++]; t.p.copy(p); t.e.textContent = txt; };
     const string = (o, d, nOut) => {                        // o: a point 1 m inside the face, far back along the line; d: along the face; nOut: out of the building
       let ch = null; for (const k of [0, 0.6, 1.4]) { const c2 = chainAlong(o.clone().addScaledVector(nOut, -k), d); if (c2 && c2.length > 1 && (!ch || c2.length > ch.length || (c2.length === ch.length && c2[c2.length - 1] - c2[0] > ch[ch.length - 1] - ch[0] + 0.5))) { ch = c2; o = o.clone().addScaledVector(nOut, -k); } }     // a little deeper in where the line slips through an opening
       if (!ch) return;
       const P = (t, off) => o.clone().addScaledVector(d, t).addScaledVector(nOut, 1 + off), u = d.clone().add(nOut).multiplyScalar(0.3);
-      const tick = (p) => pts.push(p.clone().sub(u), p.clone().add(u));
+      const tick = (p) => mk.push(p.clone().sub(u), p.clone().add(u));
       const a = ch[0], b = ch[ch.length - 1];
       pts.push(P(a, 1.6), P(b, 1.6), P(a, 3.2), P(b, 3.2));                                  // the inner and the outer string
       for (const t of ch) { const end = t === a || t === b; pts.push(P(t, 0.3), P(t, end ? 3.5 : 1.9)); tick(P(t, 1.6)); }
@@ -1166,7 +1196,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     const fS = face(new THREE.Vector3(c.x + 70, y, c.z), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 1)), fW = face(new THREE.Vector3(c.x, y, c.z + 70), new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0));
     if (fS !== undefined) string(new THREE.Vector3(c.x + 70 - fS - 1, y, c.z + 70), new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0));      // south side, west to east
     if (fW !== undefined) string(new THREE.Vector3(c.x + 70, y, c.z + 70 - fW - 1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 1));      // west side, south to north
-    swapLines(planRoot, pts, solidMat, 0);
+    swapLines(planRoot, pts, dotMat, 0); swapLines(planRoot, mk, markMat, 1);
   }
   function updateTags(r) {
     for (const t of tags) {
@@ -1359,7 +1389,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     { const want = S.kind === "site" && enhanced && poiT > 2.6 ? 1 : 0; if (diagK !== want) { diagK = want > diagK ? Math.min(1, diagK + dt / 1.2) : Math.max(0, diagK - dt / 0.8); applyDiag(diagK); } }     // the diagram comes in after the arrows
     if (Math.abs(sunK - enhGoal) > 0.002 || Math.abs(sunDisc.scale.x - discGoal) > 0.002) { const f = Math.min(1, dt * 2.5); sunK += (enhGoal - sunK) * f; sunDisc.scale.setScalar(sunDisc.scale.x + (discGoal - sunDisc.scale.x) * f); applySun(); }
     if (solarTween) { solarTween.t += dt / solarTween.s; const u = Math.min(1, solarTween.t), e = u * u * (3 - 2 * u); sunAz = solarTween.az0 * (1 - e); setSolar(solarTween.from + (solarTween.to - solarTween.from) * e); if (u >= 1) solarTween = null; }
-    if (lightRun) {                                         // the light study: sunrise to night in 12 s, once (in auto play and from the buttons alike), slow at dawn and dusk; then the night holds about 12 s
+    if (lightRun) {                                         // the light study: sunrise to night in 12 s, once (in auto play and from the buttons alike), slow at dawn and dusk; then the night holds 5 s
       lightT += dt;
       if (lightT >= 0) {
         const u = Math.min(1, lightT / 12), e = u * u * (3 - 2 * u); setSolar(lightFrom + (12 + halfDay() + 0.6 - lightFrom) * e);

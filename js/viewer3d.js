@@ -702,7 +702,7 @@ export async function createViewer(root, opts) {
     if (v) { axoOff(); cutFly(); controls.autoRotate = false; autoBtn?.classList.remove("on"); }
     else { flyTo(new THREE.Vector3(82, 40, 64), new THREE.Vector3(0, 12, 0)); }
   }
-  let cutTween = null;
+  let cutTween = null, hTween = null, solarTween = null;          // solarTween: the sun easing to a new hour between scenes
   const cutDir = new THREE.Vector3(1, 0, 0); let cutS = 0, cutAng = 0, cutH = 14, horiz = false;      // plane faces the camera side: keeps everything behind dot(p, cutDir) <= cutS
   function dirFlyTo() {
     const p = new THREE.Vector3(cutDir.x * 78 - cutDir.z * 4, 26, cutDir.z * 78 + cutDir.x * 4), t = new THREE.Vector3(-cutDir.x * 2, 13, -cutDir.z * 2); flyTo(p, t);
@@ -882,6 +882,7 @@ export async function createViewer(root, opts) {
       shadowStale = true; cutTween.t += dt / 1.4; cutK = cutTween.from + (cutTween.to - cutTween.from) * ease(Math.min(1, cutTween.t));
       if (cutTween.t >= 1) { cutTween = null; if (cutK === 0) setCut(false); }
     }
+    if (hTween) { hTween.t += dt / 1.6; cutH = hTween.from + (hTween.to - hTween.from) * ease(Math.min(1, hTween.t)); shadowStale = true; dirty = true; if (hTween.t >= 1) hTween = null; }
     if (cutK > 0) {
       if (horiz) { cutPlane.normal.set(0, -1, 0); cutPlane.constant = THREE.MathUtils.lerp(80, groundY + cutH, cutK); }          // horizontal plan cut: keeps everything below this height
       else { cutPlane.normal.copy(cutDir).negate(); cutPlane.constant = THREE.MathUtils.lerp(80, cutS, cutK); }
@@ -953,7 +954,7 @@ export async function createViewer(root, opts) {
   root.querySelector(".v3-panel").appendChild(sunUi);
   const sunIn = sunUi.querySelector("input"), sunOut = sunUi.querySelector("output");
   const fmt = (h) => String(Math.floor(h)).padStart(2, "0") + ":" + String(Math.round((h % 1) * 60) % 60).padStart(2, "0");
-  const upd = () => { solar = +sunIn.value; sunOut.textContent = fmt(solar) + " solar"; applySun(); };
+  const upd = () => { solarTween = null; solar = +sunIn.value; sunOut.textContent = fmt(solar) + " solar"; applySun(); };
   sunIn.addEventListener("input", upd); upd();
   sunIn.addEventListener("pointerdown", (e) => { e.stopPropagation(); controls.autoRotate = false; autoBtn?.classList.remove("on"); });      // taking the Sun slider is also taking over: the spin and the moving sun stop
 
@@ -965,8 +966,12 @@ export async function createViewer(root, opts) {
     if (horiz) cutH = c.h; else { cutS = c.s; cutAng = c.ang * Math.PI / 180; cutDir.set(Math.cos(cutAng), 0, Math.sin(cutAng)); }
     shadowStale = true; dirty = true;
   }
-  function cutFly() { if (horiz) flyTo(new THREE.Vector3(9, 96, 0), new THREE.Vector3(0, groundY + cutH - 4, 0)); else dirFlyTo(); }      // plan: from above, a little south of the target, so north is up
-  function openCut(c) { applyCut(c); opened = true; setCut(true); root.classList.add("is-open"); cutTween = { from: 0, to: 1, t: 0 }; }     // each cut slides in from above / from the side
+  function cutFly() { if (horiz) flyTo(new THREE.Vector3(9, 96, 0), new THREE.Vector3(0, groundY + 6, 0)); else dirFlyTo(); }      // plan: from above, a little south of the target, so north is up
+  function openCut(c) {
+    const glide = opened && cutK > 0.5 && horiz && c.h !== undefined, h0 = cutH;         // plan to plan: the cut glides to the next height
+    applyCut(c); opened = true; setCut(true); root.classList.add("is-open");
+    if (glide) { cutH = h0; cutTween = null; cutK = 1; hTween = { from: h0, to: c.h, t: 0 }; } else { hTween = null; cutTween = { from: 0, to: 1, t: 0 }; }
+  }     // each cut slides in from above / from the side
   function closeCut() { if (!opened && cutK === 0) return; opened = false; root.classList.remove("is-open"); cutTween = { from: cutK, to: 0, t: 0 }; }
 
   // ---- the spatial viewer: auto play (a loop of scenes, each with its name, a typed caption and a countdown bar) and take over (any touch: the scene stays,
@@ -999,7 +1004,7 @@ export async function createViewer(root, opts) {
   const tags = [];
   const mkTag = (html, cls, p, on, dy = 0) => { const e = document.createElement("span"); e.className = cls; e.innerHTML = html; dimLayer.appendChild(e); tags.push({ e, p, on, dy }); };
   for (const p of POIS) mkTag(`${p.name} <i>${p.dist < 1000 ? Math.round(p.dist / 5) * 5 : (p.dist / 1000).toFixed(1) + " k"} m</i>`, "v3-poi", p.at, () => enhanced && SCENES[sceneI].kind === "site" && p.k > 0.95, p.dy || 0);
-  for (const id of Object.keys(AREAS)) for (const [nm, a, x, y, z] of AREAS[id]) mkTag(`${nm} <i>${a} m²</i>`, "v3-area", b2t(x, y, z), () => SCENES[sceneI].id === id && opened && cutK > 0.9 && !cutMoved);
+  for (const id of Object.keys(AREAS)) for (const [nm, a, x, y, z] of AREAS[id]) mkTag(`${nm} <i>${a} m²</i>`, "v3-area", b2t(x, y, z), () => SCENES[sceneI].id === id && opened && cutK > 0.9 && !cutMoved && !hTween);
   function updateTags(r) {
     for (const t of tags) {
       let vis = notesOn && t.on(); if (vis) { dimV.copy(t.p).project(camera); vis = dimV.z < 1 && Math.abs(dimV.x) < 1.1 && Math.abs(dimV.y) < 1.1; }
@@ -1009,6 +1014,8 @@ export async function createViewer(root, opts) {
   }
   function enhance(on) { const site = SCENES[sceneI].kind === "site"; sunK = on && site ? 0.4 : 1; enhanced = on; arcBold.visible = on; arc.visible = !on; sunDisc.scale.setScalar(on ? (site ? 1.6 : 2.6) : 1); applySun(); poiRoot.visible = on && SCENES[sceneI].kind === "site"; dirty = true; }     // the arrows to the other buildings: site view only
   function setSolar(h) { solar = h; sunIn.value = h; sunOut.textContent = fmt(h) + " solar"; applySun(); }
+
+  const easeSolar = (h, s = 2.2) => { solarTween = { from: solar, to: h, t: 0, s }; };          // the sun (and the night lights with it) moves to the new hour in about two seconds
   const nightHour = () => Math.min(20.5, 12 + halfDay() + 0.6);
   function siteView() {                                     // straight down on the compass, north up; the ring fitted between the title and the caption
     const w = stage.clientWidth, h = stage.clientHeight, top = 64, bottom = capRoom();
@@ -1034,7 +1041,7 @@ export async function createViewer(root, opts) {
   onResize = () => { if (siteLock) dirty = true; };          // a new size: the next frame refits the top view
   const startSpin = () => { if (mode !== "play") return; controls.autoRotate = true; spinSun = true; spinMul = 1; spinK = 1; };
   function enterScene(i) {
-    sceneI = i; sceneT = 0; lightPhase = 0; cutMoved = false; const S = SCENES[i], play = mode === "play";
+    sceneI = i; sceneT = 0; lightPhase = 0; cutMoved = false; solarTween = null; const S = SCENES[i], play = mode === "play";
     root.dataset.scene = S.kind; sceneEl.textContent = S.name; (play ? typeCap : showCap)(S.text);
     for (const [act, k] of [["prev", -1], ["next", 1]]) { const b = q(`[data-act="${act}"]`), nm = SCENES[(i + k + SCENES.length) % SCENES.length].name; if (b) { b.querySelector("span").textContent = nm; b.title = nm; } }     // the buttons carry the names of the scenes they lead to
     controls.autoRotate = false; spinSun = false; spinMul = 1; tween = null; sunAz = 0; camAzPrev = null; userMoved = S.kind !== "intro";
@@ -1042,12 +1049,12 @@ export async function createViewer(root, opts) {
     const sec = S.kind === "cut" && CUTS[S.id].h === undefined; if (sec !== lens30) { lens30 = sec; resize(); }
     if (S.kind === "site") { poiT = 0; for (const p of POIS) { p.k = 0; p.draw(0); } }                     // the arrows are drawn in, one after the other
     if (S.kind === "intro") {
-      closeCut(); if (play) setSolar(firstRun ? 10 : 9);
+      closeCut(); if (play) { if (firstRun) setSolar(10); else easeSolar(9); }
       if (firstRun) { firstRun = false; introFlight(); } else flyHero(play ? 2200 : 1500, startSpin);
     } else if (S.kind === "site" || S.kind === "light") {
       closeCut(); const v = siteView(); flyTo(v.p, v.t, 1600);
       setSolar(S.kind === "light" ? 12 - halfDay() - 0.4 : 10.5);
-    } else { openCut(CUTS[S.id]); setSolar(nightOn ? nightHour() : 12); if (sec) { siteLock = true; const v = secView(); flyTo(v.p, v.t, 1600); } else cutFly(); syncCut(); }
+    } else { openCut(CUTS[S.id]); easeSolar(nightOn ? nightHour() : 12); if (sec) { siteLock = true; const v = secView(); flyTo(v.p, v.t, 1600); } else cutFly(); syncCut(); }
     dirty = true;
   }
   function director(dt) {
@@ -1055,6 +1062,7 @@ export async function createViewer(root, opts) {
     if (poiT < 4) {                                         // site view: each arrow grows out in 0.8 s, 0.35 s after the one before, once the camera has landed
       poiT += dt; POIS.forEach((p, i) => { const k = THREE.MathUtils.clamp((poiT - 1.4 - i * 0.35) / 0.8, 0, 1); if (k !== p.k) { p.k = k; p.draw(ease(k)); } }); dirty = true;
     }
+    if (solarTween) { solarTween.t += dt / solarTween.s; const u = Math.min(1, solarTween.t); setSolar(solarTween.from + (solarTween.to - solarTween.from) * u * u * (3 - 2 * u)); if (u >= 1) solarTween = null; }
     const S = SCENES[sceneI];
     if (mode === "play") {
       sceneT += dt;
@@ -1119,7 +1127,7 @@ export async function createViewer(root, opts) {
   dayIn.addEventListener("input", updDay); updDay();
   for (const el of [sunIn, dayIn]) el.addEventListener("input", () => { if (mode === "play") takeOver(); });          // moving a slider pauses the auto play
   const dnBtn = document.createElement("button"); dnBtn.type = "button"; dnBtn.className = "v3-dn"; dnBtn.textContent = "Night"; dnBtn.title = "Switch between day and night";
-  dnBtn.addEventListener("click", () => { if (mode === "play") takeOver(); nightOn = !nightOn; dnBtn.textContent = nightOn ? "Day" : "Night"; dnBtn.classList.toggle("on", nightOn); setSolar(nightOn ? nightHour() : 12); });
+  dnBtn.addEventListener("click", () => { if (mode === "play") takeOver(); nightOn = !nightOn; dnBtn.textContent = nightOn ? "Day" : "Night"; dnBtn.classList.toggle("on", nightOn); easeSolar(nightOn ? nightHour() : 12); });
   root.querySelector(".v3-panel").appendChild(dnBtn);
   // exploring the plans and sections: a slider moves the cut (plans 0.5 to 35 m above the bottom of the model, sections 14 m either side of the centre)
   const cutUi = document.createElement("div"); cutUi.className = "v3-sun v3-cutsl";
@@ -1131,7 +1139,7 @@ export async function createViewer(root, opts) {
     const c = CUTS[SCENES[sceneI].id]; if (!c) return; const plan = c.h !== undefined;
     cutLbl.textContent = plan ? "Height" : "Cut"; cutIn.min = plan ? 0.5 : -14; cutIn.max = plan ? 35 : 14; cutIn.value = plan ? c.h : c.s; showCutVal();
   }
-  cutIn.addEventListener("input", () => { if (mode === "play") takeOver(); if (horiz) cutH = +cutIn.value; else cutS = +cutIn.value; cutMoved = true; shadowStale = true; dirty = true; showCutVal(); });
+  cutIn.addEventListener("input", () => { if (mode === "play") takeOver(); hTween = null; if (horiz) cutH = +cutIn.value; else cutS = +cutIn.value; cutMoved = true; shadowStale = true; dirty = true; showCutVal(); });
   cutUi.addEventListener("pointerdown", (e) => e.stopPropagation());
   for (const el of [sunUi, dayUi, dnBtn]) el.addEventListener("pointerdown", (e) => e.stopPropagation());
 

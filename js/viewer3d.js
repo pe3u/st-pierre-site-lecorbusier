@@ -234,8 +234,8 @@ export async function createViewer(root, opts) {
     const gm = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); gm.color.setScalar(1.3); gm.clipShadows = true;
     const glass = new THREE.Mesh(geo, gm); glass.position.copy(b2t(...gl.c)); glass.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), bdir(...gl.n)); scene.add(glass);
     glowMats.push({ mat: gm, base: gm.color.clone() });
-    // the light, straight down the tube's axis from its inner end to where it lands, spreading a little
-    const mouth = b2t(...cn.at), to = b2t(...cn.to), dir = to.clone().sub(mouth), len = dir.length(), ang = Math.atan(1.5 * cn.r / len) + 0.04; dir.normalize();
+    // the light, straight down the tube's axis from its inner end to where it lands, widening to about six times the opening
+    const mouth = b2t(...cn.at), to = b2t(...cn.to), dir = to.clone().sub(mouth), len = dir.length(), ang = Math.atan(3 * cn.r / len) + 0.08; dir.normalize();
     const L = new THREE.SpotLight(cn.col, 0, len * 1.3, ang, 0.6, 2); L.position.copy(mouth); L.target.position.copy(to); scene.add(L, L.target);
     // the shaft: an open cone from the opening along the beam, fading down its length and towards its edges, added onto what lies behind
     const cg = new THREE.CylinderGeometry(cn.r, cn.r + Math.tan(ang) * len, len, 32, 1, true); cg.translate(0, -len / 2, 0);
@@ -251,7 +251,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     const shaft = new THREE.Mesh(cg, sm); shaft.position.copy(mouth); shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir); shaft.renderOrder = 8; shaft.frustumCulled = false; shaft.visible = false; scene.add(shaft); noAO.push(shaft);
     cannonFx.push({ L, sm, shaft, k: cn.k });
   }
-  function cannonLight(f) { for (const c of cannonFx) { c.L.intensity = 900 * c.k * f; c.sm.opacity = 0.2 * f; c.shaft.visible = f > 0.001; } }      // the spots stay in the scene (switching lights on and off would rebuild every shader)
+  function cannonLight(f) { for (const c of cannonFx) { c.L.intensity = 1300 * c.k * f; c.sm.opacity = 0.34 * f; c.shaft.visible = f > 0.001; } }      // the spots stay in the scene (switching lights on and off would rebuild every shader)
 
   // architectural facade lighting: one wide flood light per facade, 46 m out from the church, on the ground and aimed up the wall; these are real lights, so they cast shadows (reveals, balconies, the ramp)
   const flood = [];
@@ -1237,15 +1237,12 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
           prev = cur; if (s >= s1) break;
         }
       };
-      const chevron = (pos, q, sgn, arm, h) => {               // an open head at q, pointing along the line (sgn 1) or back (-1): two strokes and a mitred tip
-        const dx = q.dx * sgn, dz = q.dz * sgn, cs = Math.cos(0.72), sn = Math.sin(0.72), out = [];
+      const chevron = (pos, q, sgn, arm, h) => {               // an open head at q, pointing along the line (sgn 1) or back (-1): two strokes meeting on the mitre, without overlapping
+        const dx = q.dx * sgn, dz = q.dz * sgn, cs = Math.cos(0.72), sn = Math.sin(0.72), mo = P3(q.x + dx * h / sn, q.z + dz * h / sn), mi = P3(q.x - dx * h / sn, q.z - dz * h / sn);
         for (const k of [1, -1]) {
-          const ax = -dx * cs - k * dz * sn, az = -dz * cs + k * dx * sn, px = -az * h, pz = ax * h, ex = q.x + ax * arm, ez = q.z + az * arm;
-          quad(pos, P3(q.x + px, q.z + pz), P3(ex + px, ez + pz), P3(ex - px, ez - pz), P3(q.x - px, q.z - pz));
-          out.push(px * dx + pz * dz > 0 ? [q.x + px, q.z + pz] : [q.x - px, q.z - pz]);
+          const ax = -dx * cs - k * dz * sn, az = -dz * cs + k * dx * sn, ox = (dx * sn - k * dz * cs) * h, oz = (dz * sn + k * dx * cs) * h, ex = q.x + ax * arm, ez = q.z + az * arm;
+          quad(pos, mo, P3(ex + ox, ez + oz), P3(ex - ox, ez - oz), mi);
         }
-        const tip = P3(q.x, q.z), m = P3(q.x + dx * h / sn, q.z + dz * h / sn);
-        pos.push(...tip, ...P3(...out[0]), ...m, ...tip, ...m, ...P3(...out[1]));
       };
       const roadM = mk(NAVY, 1), pedM = mk(RED, 1);
       for (const r of c.road) {
@@ -1274,7 +1271,8 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   const legend = document.createElement("div"); legend.className = "v3-legend"; legend.style.display = "none";
   legend.innerHTML = LEG.map(([k, t]) => (t ? `<span>${k}${t}</span>` : `<b>${k}</b>`)).join("");
   stage.appendChild(legend);
-  function applyDiag(k) { const e = k * k * (3 - 2 * k); if (k > 0) buildCirc(); circRoot.visible = e > 0.01; for (const m of circMats) m.opacity = m.userData.op * e; for (const d of diagMats) { d.m.color.copy(d.c0).lerp(d.tint, e); if (d.lit) d.m.emissive.copy(d.e0).lerp(d.et || d.tint, e); } legend.style.opacity = e.toFixed(3); legend.style.display = e > 0.01 ? "" : "none"; dirty = true; }
+  const DIAG_K = 0.5;                                          // the diagram is laid over the map at half strength
+  function applyDiag(k) { const e = k * k * (3 - 2 * k); if (k > 0) buildCirc(); circRoot.visible = e > 0.01; for (const m of circMats) m.opacity = m.userData.op * e * DIAG_K; for (const d of diagMats) { const f = d.et ? e * DIAG_K : e; d.m.color.copy(d.c0).lerp(d.tint, f); if (d.lit) d.m.emissive.copy(d.e0).lerp(d.et || d.tint, f); } legend.style.opacity = e.toFixed(3); legend.style.display = e > 0.01 ? "" : "none"; dirty = true; }
   // at the end of the auto play the three buttons (take over, replay, more visuals) sit in a row just above the scene's name and words; back in their corner after
   const endBar = document.createElement("div"); endBar.className = "v3-endbar";
   const endBtns = [".v3-explore", ".v3-replay", ".v3-more"].map((sel) => root.querySelector(sel)).filter(Boolean), endHome = endBtns.map((b) => [b, b.parentNode, b.nextSibling]);

@@ -495,3 +495,7 @@ footer .addr { margin-top: 0; }
 .v3:not(.is-play) .v3-facts { top: 76px; }
 .v3-north { top: 136px; }
 @media (max-width: 900px) { .v3-help { right: 12px; top: 12px; } .v3-help .v3-how { display: none; } .v3-north { top: 34px; } }
+
+/* exploring: the cut slider, under plans and sections only */
+.v3-panel .v3-cutsl { display: none; }
+.v3.is-take[data-scene="cut"] .v3-panel .v3-cutsl { display: flex; }

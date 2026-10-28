@@ -959,6 +959,7 @@ export async function createViewer(root, opts) {
 
   // ---- cuts: two vertical sections, 8 m off the centre, and three plans (heights above the bottom of the model)
   const CUTS = { sWE: { ang: 0, s: 8 }, sNS: { ang: 90, s: 8 }, p14: { h: 14 }, p55: { h: 5.5 }, p2: { h: 2 } };
+  let cutMoved = false;                                     // the cut slider moved the plan or section away from its preset: the floor areas no longer apply
   function applyCut(c) {
     horiz = c.h !== undefined;
     if (horiz) cutH = c.h; else { cutS = c.s; cutAng = c.ang * Math.PI / 180; cutDir.set(Math.cos(cutAng), 0, Math.sin(cutAng)); }
@@ -998,7 +999,7 @@ export async function createViewer(root, opts) {
   const tags = [];
   const mkTag = (html, cls, p, on, dy = 0) => { const e = document.createElement("span"); e.className = cls; e.innerHTML = html; dimLayer.appendChild(e); tags.push({ e, p, on, dy }); };
   for (const p of POIS) mkTag(`${p.name} <i>${p.dist < 1000 ? Math.round(p.dist / 5) * 5 : (p.dist / 1000).toFixed(1) + " k"} m</i>`, "v3-poi", p.at, () => enhanced && SCENES[sceneI].kind === "site" && p.k > 0.95, p.dy || 0);
-  for (const id of Object.keys(AREAS)) for (const [nm, a, x, y, z] of AREAS[id]) mkTag(`${nm} <i>${a} m²</i>`, "v3-area", b2t(x, y, z), () => SCENES[sceneI].id === id && opened && cutK > 0.9);
+  for (const id of Object.keys(AREAS)) for (const [nm, a, x, y, z] of AREAS[id]) mkTag(`${nm} <i>${a} m²</i>`, "v3-area", b2t(x, y, z), () => SCENES[sceneI].id === id && opened && cutK > 0.9 && !cutMoved);
   function updateTags(r) {
     for (const t of tags) {
       let vis = notesOn && t.on(); if (vis) { dimV.copy(t.p).project(camera); vis = dimV.z < 1 && Math.abs(dimV.x) < 1.1 && Math.abs(dimV.y) < 1.1; }
@@ -1033,7 +1034,7 @@ export async function createViewer(root, opts) {
   onResize = () => { if (siteLock) dirty = true; };          // a new size: the next frame refits the top view
   const startSpin = () => { if (mode !== "play") return; controls.autoRotate = true; spinSun = true; spinMul = 1; spinK = 1; };
   function enterScene(i) {
-    sceneI = i; sceneT = 0; lightPhase = 0; const S = SCENES[i], play = mode === "play";
+    sceneI = i; sceneT = 0; lightPhase = 0; cutMoved = false; const S = SCENES[i], play = mode === "play";
     root.dataset.scene = S.kind; sceneEl.textContent = S.name; (play ? typeCap : showCap)(S.text);
     for (const [act, k] of [["prev", -1], ["next", 1]]) { const b = q(`[data-act="${act}"]`), nm = SCENES[(i + k + SCENES.length) % SCENES.length].name; if (b) { b.querySelector("span").textContent = nm; b.title = nm; } }     // the buttons carry the names of the scenes they lead to
     controls.autoRotate = false; spinSun = false; spinMul = 1; tween = null; sunAz = 0; camAzPrev = null; userMoved = S.kind !== "intro";
@@ -1046,7 +1047,7 @@ export async function createViewer(root, opts) {
     } else if (S.kind === "site" || S.kind === "light") {
       closeCut(); const v = siteView(); flyTo(v.p, v.t, 1600);
       setSolar(S.kind === "light" ? 12 - halfDay() - 0.4 : 10.5);
-    } else { openCut(CUTS[S.id]); setSolar(nightOn ? nightHour() : 12); if (sec) { siteLock = true; const v = secView(); flyTo(v.p, v.t, 1600); } else cutFly(); }
+    } else { openCut(CUTS[S.id]); setSolar(nightOn ? nightHour() : 12); if (sec) { siteLock = true; const v = secView(); flyTo(v.p, v.t, 1600); } else cutFly(); syncCut(); }
     dirty = true;
   }
   function director(dt) {
@@ -1120,6 +1121,18 @@ export async function createViewer(root, opts) {
   const dnBtn = document.createElement("button"); dnBtn.type = "button"; dnBtn.className = "v3-dn"; dnBtn.textContent = "Night"; dnBtn.title = "Switch between day and night";
   dnBtn.addEventListener("click", () => { if (mode === "play") takeOver(); nightOn = !nightOn; dnBtn.textContent = nightOn ? "Day" : "Night"; dnBtn.classList.toggle("on", nightOn); setSolar(nightOn ? nightHour() : 12); });
   root.querySelector(".v3-panel").appendChild(dnBtn);
+  // exploring the plans and sections: a slider moves the cut (plans 0.5 to 35 m above the bottom of the model, sections 14 m either side of the centre)
+  const cutUi = document.createElement("div"); cutUi.className = "v3-sun v3-cutsl";
+  cutUi.innerHTML = '<span class="label">Cut</span><input type="range" step="0.1" aria-label="Position of the cut"><output></output>';
+  root.querySelector(".v3-panel").appendChild(cutUi);
+  const cutIn = cutUi.querySelector("input"), cutOut = cutUi.querySelector("output"), cutLbl = cutUi.querySelector(".label");
+  const showCutVal = () => { const v = +cutIn.value; cutOut.textContent = (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + " m"; };
+  function syncCut() {
+    const c = CUTS[SCENES[sceneI].id]; if (!c) return; const plan = c.h !== undefined;
+    cutLbl.textContent = plan ? "Height" : "Cut"; cutIn.min = plan ? 0.5 : -14; cutIn.max = plan ? 35 : 14; cutIn.value = plan ? c.h : c.s; showCutVal();
+  }
+  cutIn.addEventListener("input", () => { if (mode === "play") takeOver(); if (horiz) cutH = +cutIn.value; else cutS = +cutIn.value; cutMoved = true; shadowStale = true; dirty = true; showCutVal(); });
+  cutUi.addEventListener("pointerdown", (e) => e.stopPropagation());
   for (const el of [sunUi, dayUi, dnBtn]) el.addEventListener("pointerdown", (e) => e.stopPropagation());
 
   if (/[?&]debug/.test(location.search)) window.__v3 = { renderer, scene, ghostScene, ghostMat, ghostEdge, gtao, finalPass, sun, hemi, composer, controls, camera: () => camera };

@@ -1361,7 +1361,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   function enterScene(i, zoom = false) {                    // zoom: the intro with its flight in (the Play button)
     sceneI = i; sceneT = 0; lightPhase = 0; lightRun = false; cutMoved = false; solarTween = null; const S = SCENES[i], play = mode === "play";
     root.dataset.scene = S.kind; sceneEl.textContent = S.name; typeCap(S.text);
-    for (const [act, k] of [["prev", -1], ["next", 1]]) { const b = q(`[data-act="${act}"]`), nm = SCENES[(i + k + SCENES.length) % SCENES.length].name; if (b) { b.querySelector("span").textContent = nm; b.title = nm; } }     // the buttons carry the names of the scenes they lead to
+    for (const [act, k] of [["prev", -1], ["next", 1]]) { const b = q(`[data-act="${act}"]`), nm = SCENES[(i + k + SCENES.length) % SCENES.length].name; if (b) b.title = (k < 0 ? "Previous: " : "Next: ") + nm; }     // the buttons say Previous and Next; the view they lead to is in their tooltip
     controls.autoRotate = false; spinSun = false; spinMul = 1; tween = null; camAzPrev = null; userMoved = S.kind !== "intro";
     easeSolar(solar);                                       // the sun keeps its hour and swings back to its own place; the scenes below set their own hours
     enhance(S.kind === "site" || S.kind === "light"); siteLock = S.kind === "site" || S.kind === "light";
@@ -1421,7 +1421,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   const PLAY_ICON = '<path d="M8 5l11 7-11 7z"/>', PAUSE_ICON = '<path d="M8 5v14M16 5v14"/>';
   function setMode(m) {
     mode = m; if (m === "take") setEnded(false); root.classList.toggle("is-play", m === "play"); root.classList.toggle("is-take", m === "take"); if (m === "take") root.classList.add("was-take");
-    const pb = q('[data-act="play"]'); if (pb) { pb.querySelector("svg").innerHTML = m === "play" ? PAUSE_ICON : PLAY_ICON; pb.querySelector("span").textContent = m === "play" ? "Pause" : "Play"; pb.title = m === "play" ? "Pause" : "Auto play"; }
+    const pb = q('[data-act="play"]'); if (pb) { pb.querySelector("svg").innerHTML = m === "play" ? PAUSE_ICON : PLAY_ICON; pb.querySelector("span").textContent = m === "play" ? "Pause" : "Play/Resume"; pb.title = m === "play" ? "Pause" : "Play, or resume the auto play from this view"; }
     idleT = 0; setTouch(); setHint(); fitPage(); dirty = true;
   }
   function takeOver() {

@@ -40,7 +40,16 @@ new IntersectionObserver((e) => { if (e[0].isIntersecting) startViewer(); }, { r
 startViewer();   // the hero: start straight away
 
 // ---- other components
-mountPano(document.querySelector("#pano"), { base: "assets/pano/", views: [{ file: "pano_1.jpg", name: "Upper seating" }, { file: "pano_2.jpg", name: "Altar platform" }, { file: "pano_3.jpg", name: "Lower seating" }] });
+// the 360s: each viewpoint where its panorama was rendered (Blender m, eye height over the floor); the cannons as in the 3D viewer: the inner end of each tube, where its light lands, the opening's radius
+mountPano(document.querySelector("#pano"), {
+  base: "assets/pano/",
+  views: [{ file: "pano_1.jpg", name: "Upper seating", at: [19, 8, 9.477] }, { file: "pano_2.jpg", name: "Altar platform", at: [11, 12.5, 7.573] }, { file: "pano_3.jpg", name: "Lower seating", at: [14, 5.5, 8.75] }],
+  cannons: [
+    { col: 0xff2a1a, at: [14.95, 2.59, 26.08], to: [2.83, 2.59, 7.6], r: 0.84 },
+    { col: 0xffc21a, at: [10.73, 9.55, 28.02], to: [3.55, 9.55, 17.08], r: 0.95 },
+    { col: 0x2ee05a, at: [6.84, 1.33, 13.65], to: [13.31, 22.52, 5.51], r: 0.75 },
+  ],
+});
 document.querySelectorAll(".tl").forEach((el) => mountTimelapse(el));
 
 // ---- reveal on scroll

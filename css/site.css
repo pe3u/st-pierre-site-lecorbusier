@@ -485,3 +485,13 @@ footer .addr { margin-top: 0; }
 
 /* every screen: the viewer (3D view, and the controls when they show) fits the window under the header; the height is set by viewer3d.js */
 .v3:not(.is-fs):not(:fullscreen) .v3-stage { height: var(--v3h, 70vh) !important; min-height: 0 !important; max-height: none !important; aspect-ratio: auto !important; }
+
+/* the instructions sit at the top right (in take-over; in auto play the Tap to explore button is there), the figures under them */
+.v3-help { position: absolute; right: 18px; top: 16px; z-index: 5; text-align: right; pointer-events: none; }
+.v3-help .v3-hint { position: static; display: block !important; font-size: 10.5px; }
+.v3-help .v3-how { display: block; margin-top: 5px; font-size: 11.5px; line-height: 1.5; color: var(--mute); }
+.v3.is-night .v3-help .v3-how { color: rgba(255,255,255,.55); }
+.v3.is-play .v3-help { display: none; }
+.v3:not(.is-play) .v3-facts { top: 76px; }
+.v3-north { top: 136px; }
+@media (max-width: 900px) { .v3-help { right: 12px; top: 12px; } .v3-help .v3-how { display: none; } .v3-north { top: 34px; } }

@@ -539,3 +539,20 @@ h1 { cursor: pointer; }
 .v3-lvsec i { font-style: normal; color: var(--ink2); margin-left: 3px; }
 .v3.is-night .v3-area em { background: rgba(80,140,140,.6); color: #fff; }
 @media (max-width: 720px) { .v3-area b { font-size: 10px; } .v3-area em { font-size: 9.5px; } .v3-pdim, .v3-sdim, .v3-lvsec { font-size: 9.5px; } }
+
+/* the diagram's key: no box, the words haloed like the other labels */
+.v3-legend { background: none; box-shadow: none; padding: 0; text-shadow: 0 0 3px rgba(255,255,255,.95), 0 0 7px rgba(255,255,255,.85); }
+.v3-legend b { color: var(--ink2); }
+@media (max-width: 720px) { .v3-legend { padding: 0; } }
+/* drag to turn: when it shows up, a dark pill that pulses three times and then settles back into plain text */
+.v3-help .v3-hint { display: inline-block !important; padding: 4px 9px; margin-right: -9px; border-radius: 999px; transform-origin: right center; }
+.v3-help .v3-hint.flash { animation: v3-hint-flash 3.4s ease-out; }
+@keyframes v3-hint-flash {
+  0% { opacity: 0; transform: translateY(-8px) scale(.9); background: var(--ink); color: #fff; }
+  10% { opacity: 1; transform: none; background: var(--ink); color: #fff; }
+  20%, 40%, 60% { transform: scale(1.14); } 30%, 50%, 70% { transform: scale(1); }
+  80% { background: var(--ink); color: #fff; }
+  100% { background: transparent; color: var(--mute); }
+}
+.v3.is-night .v3-help .v3-hint.flash { animation-name: v3-hint-flash-n; }
+@keyframes v3-hint-flash-n { 0%, 80% { background: #fff; color: #111; } 0% { opacity: 0; } 10% { opacity: 1; } 20%, 40%, 60% { transform: scale(1.14); } 30%, 50%, 70% { transform: scale(1); } 100% { background: transparent; color: rgba(255,255,255,.55); } }

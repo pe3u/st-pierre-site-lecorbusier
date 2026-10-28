@@ -131,6 +131,7 @@ export async function createViewer(root, opts) {
       const col = /light/.test(nm) ? 0xf6f6f4 : /road/.test(nm) ? 0xb6b6b7 : 0x7f9c58;
       mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.96, metalness: 0, side: THREE.DoubleSide, transparent: false, depthWrite: true, clipShadows: true });
       const lawn = !/road/.test(nm);          // height curves (contour lines) on the lawns only
+      mat.userData.diag = /light/.test(nm) ? "sidewalk" : /road/.test(nm) ? "road" : null;      // in the site diagram: paving with the footpaths, the roads with the roads
       mat.onBeforeCompile = (sh) => {
         sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vGP;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvGP = (modelMatrix * vec4(position, 1.0)).xyz;");
         if (lawn) sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
@@ -167,8 +168,8 @@ export async function createViewer(root, opts) {
   // ---- the surroundings, 200 m round the church (OpenStreetMap footprints, roads and green areas; heights and roof types from IGN BD TOPO): one flat colour per kind,
   // white buildings with their real height and roof type, level with the terrain (z = -2.9) (no fade)
   const CTX_COL = { site: [0x7f9c58, -7], base: [0x7f9c58, -6], green: [0x7f9c58, -5], forest: [0x7f9c58, -5], sport: [0x7f9c58, -4], pitch: [0x7f9c58, -4], parking: [0xffffff, -4], sidewalk: [0xffffff, -3], road: [0xb6b6b7, -2] };
-  const DIAG = { road: 0x2f3338, sidewalk: 0xe3a92b, parking: 0xb3aed6, sport: 0x6f9fe0, pitch: 0x6f9fe0, b_lc: 0xc9483b, b_pub: 0xee9a4d, b_res: 0xb197e6, b_com: 0xf2cf5b, b_off: 0xf2cf5b };
-  const diagMats = [];                                                // the site diagram: the materials it recolours, with their own colours
+  const DIAG = { road: 0x8d7b88, sidewalk: 0xe3a92b, parking: 0xb3aed6, sport: 0xeea2b6, pitch: 0xeea2b6, b_lc: 0xc9483b, b_pub: 0xee9a4d, b_res: 0xb197e6, b_com: 0xf2cf5b, b_off: 0xf2cf5b };
+  const diagMats = []; let ctxScene = null;                         // the site diagram: the materials it recolours, with their own colours; ctxScene: the surroundings, once loaded (the site arrows measure on them)
   const ctxLit = [];                                                  // the surroundings' white materials: their glow follows the sun, so the buildings darken towards evening and night
   const siteMeshes = [], siteRoot = new THREE.Group(); scene.add(siteRoot);
   const ctxRoot = new THREE.Group(); ctxRoot.visible = true; scene.add(ctxRoot);
@@ -195,6 +196,7 @@ export async function createViewer(root, opts) {
       if (DIAG[key]) diagMats.push({ m, c0: m.color.clone(), e0: m.emissive.clone(), lit: m.emissiveIntensity > 0 && m.emissive.r > 0, tint: new THREE.Color(DIAG[key]) });
     });
     g.scene.updateMatrixWorld(true); for (const m of siteMeshes) siteRoot.attach(m);
+    ctxScene = g.scene;
     ctxRoot.add(g.scene); applySun();
   }).catch((e) => console.warn("surroundings not loaded", e));
 
@@ -567,20 +569,21 @@ export async function createViewer(root, opts) {
     { name: "Piscine", n: 52.5, e: 53.9 }, { name: "Stade", n: -32, e: 139, dy: -13 },
     { name: "Maison de la Culture", n: -19.7, e: 235.7, dy: 12 }, { name: "Unité d'habitation", n: -644, e: -384 },
   ];
+  const POI_B = { v: 66 };                                  // where the arrows' tips reach, metres from the church
   const poiRoot = new THREE.Group(); poiRoot.position.y = 0.3; poiRoot.visible = false; skyRoot.add(poiRoot);
   {
     const mat = new THREE.MeshBasicMaterial({ color: 0xc9483b, side: THREE.DoubleSide, depthTest: false });          // the red of the north mark: legible by day and by night
     for (const p of POIS) {
       const dist = Math.hypot(p.n, p.e), dx = -p.n / dist, dz = -p.e / dist;          // viewer: north = -x, east = -z
-      p.dist = dist; const a = 26, b = SKY_R + 8;              // all the arrows the same length: from by the church out across the ring
+      p.dist = dist; p.dx = dx; p.dz = dz; const a = 26;          // all the arrows the same length: up to the pool's nearest edge (set once the surroundings are in)
       const nx = -dz, nz = dx, w = 0.9, hl = 7, hw = 3.4;
       const P = (s, o) => new THREE.Vector3(dx * s + nx * o, 0, dz * s + nz * o);
       p.draw = (k) => {                                                                  // k 0..1: the arrow grows from its tail; the head rides on the tip
-        const t = a + (b - a) * k, s = Math.max(a, t - hl * Math.min(1, k * 3));
+        const b = POI_B.v, t = a + (b - a) * k, s = Math.max(a, t - hl * Math.min(1, k * 3));
         p.mesh.geometry.setFromPoints([P(a, -w), P(s, -w), P(s, w), P(a, -w), P(s, w), P(a, w), P(s, -hw * Math.min(1, k * 3)), P(t, 0), P(s, hw * Math.min(1, k * 3))]);
       };
       p.mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat); p.mesh.renderOrder = 22; p.mesh.frustumCulled = false; poiRoot.add(p.mesh); p.draw(1);
-      p.at = P(74, 0).add(skyRoot.position);                    // where its name sits: on the arrow, inside the ring
+      p.at = new THREE.Vector3(); p.place = () => p.at.copy(P(POI_B.v + 7, 0)).add(skyRoot.position); p.place();       // where its name sits: just past the arrow's tip
     }
   }
 
@@ -1104,12 +1107,20 @@ export async function createViewer(root, opts) {
   }
   function enhance(on) { const site = SCENES[sceneI].kind === "site"; enhGoal = on && site ? 0.4 : 1; discGoal = on ? (site ? 1.6 : 2.6) : 1; enhanced = on; arcBold.visible = on; arc.visible = !on; if (on && site) poiRoot.visible = true; applySun(); dirty = true; }     // the sun's size and strength ease to the new goal (director); the arrows: site view only
   // the site diagram: roads, footpaths and parking (circulation, by kind of traffic) and the buildings and grounds by function, in colour over the surroundings
+  model.traverse((o) => { const k = o.isMesh && o.material.userData.diag; if (k && !diagMats.some((d) => d.m === o.material)) diagMats.push({ m: o.material, c0: o.material.color.clone(), e0: o.material.emissive.clone(), lit: false, tint: new THREE.Color(DIAG[k]) }); });
   const LEG = [["Circulation"], ["road", "Roads · vehicles", "ln"], ["sidewalk", "Footpaths and squares · on foot", "ln thin"], ["parking", "Parking"], ["Functions"], ["b_lc", "Le Corbusier"], ["b_pub", "Public and sport buildings"], ["b_res", "Housing"], ["b_com", "Shops and offices"], ["sport", "Sport grounds"]];
   const legend = document.createElement("div"); legend.className = "v3-legend"; legend.style.display = "none";
   legend.innerHTML = LEG.map(([k, t, c]) => (t ? `<span><i class="${c || ""}" style="background:#${DIAG[k].toString(16).padStart(6, "0")}"></i>${t}</span>` : `<b>${k}</b>`)).join("");
   stage.appendChild(legend);
   function applyDiag(k) { const e = k * k * (3 - 2 * k); for (const d of diagMats) { d.m.color.copy(d.c0).lerp(d.tint, e); if (d.lit) d.m.emissive.copy(d.e0).lerp(d.tint, e); } legend.style.opacity = e.toFixed(3); legend.style.display = e > 0.01 ? "" : "none"; dirty = true; }
   function setEnded(v) { ended = v; root.classList.toggle("is-ended", v); }
+  let poiFit = false;
+  function fitPois() {                                      // the arrows reach the pool's nearest edge, measured on the surroundings once they are in
+    if (poiFit || !ctxScene) return; poiFit = true; const pool = POIS[0], bl = []; ctxScene.traverse((o) => { if (o.isMesh && /^ctx_b_/.test(o.name)) bl.push(o); });
+      const rc = new THREE.Raycaster(new THREE.Vector3(SKY_C.x, 1, SKY_C.z), new THREE.Vector3(pool.dx, 0, pool.dz), 30, 140);
+      const sides = bl.map((o) => { const sd = o.material.side; o.material.side = THREE.DoubleSide; return sd; }), hit = rc.intersectObjects(bl, false)[0]; bl.forEach((o, i) => { o.material.side = sides[i]; });
+      if (hit) { POI_B.v = hit.distance - 0.5; for (const p of POIS) p.place(); }
+  }
   function setSolar(h) { solar = h; sunIn.value = h; sunOut.textContent = fmt(h) + " solar"; applySun(); }
 
   const easeSolar = (h, s = 2.2) => { solarTween = { from: solar, to: h, t: 0, s, az0: Math.atan2(Math.sin(sunAz), Math.cos(sunAz)) }; };          // the sun (and the night lights with it) moves to the new hour in about two seconds, and back round to its own place
@@ -1153,7 +1164,7 @@ export async function createViewer(root, opts) {
     easeSolar(solar);                                       // the sun keeps its hour and swings back to its own place; the scenes below set their own hours
     enhance(S.kind === "site" || S.kind === "light"); siteLock = S.kind === "site" || S.kind === "light";
     const sec = S.kind === "cut" && CUTS[S.id].h === undefined; if (sec !== lens30) { lens30 = sec; resize(); }
-    if (S.kind === "site") { poiT = 0; for (const p of POIS) { p.k = 0; p.draw(0); } }                     // the arrows are drawn in, one after the other
+    if (S.kind === "site") { fitPois(); poiT = 0; for (const p of POIS) { p.k = 0; p.draw(0); } }                     // the arrows are drawn in, one after the other
     if (S.kind === "intro") {
       closeCut(); if (!booted) setSolar(10); else if (play) easeSolar(firstRun || zoom ? 10 : 9);
       if (firstRun || zoom) { firstRun = false; introFlight(booted); } else flyHero(play ? 2200 : 1500, startSpin);
@@ -1199,7 +1210,10 @@ export async function createViewer(root, opts) {
     if (!coarse) return; controls.enabled = mode !== "play";
     renderer.domElement.style.touchAction = mode === "play" ? "pan-y" : (touchRatio >= 0.85 ? "none" : "pan-y");
   }
-  function setHint() { const h = root.querySelector(".v3-hint"); if (h) h.textContent = mode === "play" ? "" : "drag to turn"; }          // in auto play the Tap to explore button says it
+  function setHint() {
+    const h = root.querySelector(".v3-hint"); if (!h) return; const was = h.textContent; h.textContent = mode === "play" ? "" : "drag to turn";
+    if (!was && h.textContent) { h.classList.remove("flash"); void h.offsetWidth; h.classList.add("flash"); }          // it shows up: a short flash and pulse to catch the eye
+  }          // in auto play the Tap to explore button says it
   root.querySelector(".v3-explore")?.addEventListener("click", () => takeOver());
   const PLAY_ICON = '<path d="M8 5l11 7-11 7z"/>', PAUSE_ICON = '<path d="M8 5v14M16 5v14"/>';
   function setMode(m) {

@@ -1032,7 +1032,15 @@ export async function createViewer(root, opts) {
     const T = cutDir.clone().multiplyScalar(cutS).addScaledVector(side, side.dot(c)).setY(c.y - dy);
     return { p: T.clone().addScaledVector(cutDir, D), t: T };
   }
-  const lockView = () => (lens30 ? secView() : siteView());
+  const PLAN_DIR = new THREE.Vector3(Math.cos(0.85) * 0.866, Math.sin(0.85), Math.cos(0.85) * 0.5);      // plans: seen from the south-south-west, about 50 degrees down
+  function planView() {                                     // one oblique view for all the plans, the church fitted between the title and the caption
+    const w = stage.clientWidth, h = stage.clientHeight, top = 64, bottom = capRoom(), t = Math.tan(THREE.MathUtils.degToRad(persp.fov / 2)), R = 17;
+    const D = R * h / (t * Math.max(120, Math.min(h - top - bottom, w - 24))), dy = ((bottom - top) / 2) * (2 * D * t / h);
+    const up = new THREE.Vector3(0, 1, 0).addScaledVector(PLAN_DIR, -PLAN_DIR.y).normalize();       // the screen's up direction, for shifting the church into the free band
+    const T = new THREE.Vector3(0.15, groundY + 6, -1.65).addScaledVector(up, -dy);
+    return { p: T.clone().addScaledVector(PLAN_DIR, D), t: T };
+  }
+  const lockView = () => (lens30 ? secView() : opened && horiz ? planView() : siteView());
   function flyHero(ms, then) {                              // back to the hero framing, along a sphere round the church
     const HT = heroTgt(), s1 = new THREE.Spherical().setFromVector3(heroPos().clone().sub(HT)), s0 = new THREE.Spherical().setFromVector3(camera.position.clone().sub(HT));
     let d = s1.theta - s0.theta; d = Math.atan2(Math.sin(d), Math.cos(d)); s1.theta = s0.theta + d;
@@ -1054,7 +1062,7 @@ export async function createViewer(root, opts) {
     } else if (S.kind === "site" || S.kind === "light") {
       closeCut(); const v = siteView(); flyTo(v.p, v.t, 1600);
       setSolar(S.kind === "light" ? 12 - halfDay() - 0.4 : 10.5);
-    } else { openCut(CUTS[S.id]); easeSolar(nightOn ? nightHour() : 12); if (sec) { siteLock = true; const v = secView(); flyTo(v.p, v.t, 1600); } else cutFly(); syncCut(); }
+    } else { openCut(CUTS[S.id]); easeSolar(nightOn ? nightHour() : 12); siteLock = true; const v = sec ? secView() : planView(); flyTo(v.p, v.t, 1600); syncCut(); }
     dirty = true;
   }
   function director(dt) {

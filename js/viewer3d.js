@@ -60,7 +60,7 @@ export async function createViewer(root, opts) {
   const renderer = new THREE.WebGLRenderer({ antialias: lite, alpha: true, powerPreference: "high-performance", stencil: false });
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  let dirty = true, dirtyUntil = performance.now() + 3000, shadowStale = true;       // render on demand: frames are drawn only when something changed
+  let dirty = true, dirtyUntil = performance.now() + 3000, shadowStale = true, shotReq = false;       // render on demand: frames are drawn only when something changed
   renderer.shadowMap.enabled = true; renderer.shadowMap.autoUpdate = false;           // the shadow map is redrawn only when the sun, the cut or the lights change, not on every camera move
   renderer.shadowMap.type = lite ? THREE.PCFShadowMap : THREE.VSMShadowMap;      // variance shadow maps: their blur radius gives soft shadow edges (phones keep the cheaper PCF)
   renderer.localClippingEnabled = false;
@@ -416,23 +416,51 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   stander(22, -6.9, 3.8, 1.76, "slim", "chat", [24, -6.1, 5.15], 0.1, false, [16, -6.5, 5.4]); stander(24, -6.1, 3.65, 1.62, "dress", "chat", [22, -6.9, 5.3], 0.60, false, [16, -6.5, 5.4]);
   stander(27, -6.1, 3.43, 1.8, "coat", "chat", [28.7, -6.9, 4.8100000000000005], 0.35, false, [16, -6.5, 5.4]); stander(28.7, -6.9, 3.31, 1.64, "dress", "chat", [27, -6.1, 4.93], 0.85, false, [16, -6.5, 5.4]);
   stander(20, -6, 3.94, 1.66, "dress", "chat", [19.9, -7, 5.45], 0.6, false, [16, -6.5, 5.4]); stander(19.9, -7, 3.95, 1.74, "slim", "chat", [20, -6, 5.4399999999999995], 1.10, false, [16, -6.5, 5.4]);
-  // on the service road that winds up from the east to the foot of the ramp, and more on the ramp: pairs talking, looking towards the church (positions measured on the road)
-  stander(32.66, -7, 3.09, 1.76, "slim", "chat", [34.04, -6.7, 4.59], 0.13); stander(34.04, -6.7, 3.09, 1.62, "dress", "chat", [32.66, -7, 4.59], 0.58);
-  stander(34.64, -5.18, 3.09, 1.8, "coat", "chat", [36.06, -5.13, 4.56], 0.42); stander(36.06, -5.13, 3.06, 1.6, "dress", "chat", [34.64, -5.18, 4.59], 0.87);
-  stander(37.18, -6.16, 3.07, 1.64, "dress", "chat", [38.42, -5.48, 4.55], 0.71); stander(38.42, -5.48, 3.05, 1.76, "coat", "chat", [37.18, -6.16, 4.57], 1.16);
-  stander(38.38, -3.76, 2.98, 1.82, "slim", "chat", [39.65, -3.12, 4.45], 1); stander(39.65, -3.12, 2.95, 1.58, "coat", "chat", [38.38, -3.76, 4.48], 1.45);
-  stander(41.11, -3.47, 3, 1.66, "dress", "chat", [41.82, -2.25, 4.39], 1.29); stander(41.82, -2.25, 2.89, 1.74, "slim", "chat", [41.11, -3.47, 4.5], 1.74);
-  stander(41.03, -0.77, 2.77, 1.76, "slim", "chat", [41.9, 0.34, 4.18], 1.58); stander(41.9, 0.34, 2.68, 1.62, "dress", "chat", [41.03, -0.77, 4.27], 2.03);
-  stander(43.44, 0.54, 2.66, 1.8, "coat", "chat", [43.71, 1.92, 4.04], 1.87); stander(43.71, 1.92, 2.54, 1.6, "dress", "chat", [43.44, 0.54, 4.16], 2.32);
-  stander(42.7, 3.16, 2.44, 1.64, "dress", "chat", [43.41, 4.39, 3.84], 0.16); stander(43.41, 4.39, 2.34, 1.76, "coat", "chat", [42.7, 3.16, 3.94], 0.61);
-  stander(44.91, 4.75, 2.32, 1.82, "slim", "chat", [45.06, 6.16, 3.71], 0.45); stander(45.06, 6.16, 2.21, 1.58, "coat", "chat", [44.91, 4.75, 3.82], 0.9);
-  stander(44.01, 7.32, 2.1, 1.66, "dress", "chat", [44.66, 8.57, 3.49], 0.74); stander(44.66, 8.57, 1.99, 1.74, "slim", "chat", [44.01, 7.32, 3.6], 1.19);
-  stander(46.23, 8.89, 1.96, 1.76, "slim", "chat", [46.47, 10.28, 3.35], 1.03); stander(46.47, 10.28, 1.85, 1.62, "dress", "chat", [46.23, 8.89, 3.46], 1.48);
-  stander(45.45, 11.49, 1.76, 1.8, "coat", "chat", [46.13, 12.73, 3.15], 1.32); stander(46.13, 12.73, 1.65, 1.6, "dress", "chat", [45.45, 11.49, 3.26], 1.77);
-  stander(47.66, 13.07, 1.63, 1.64, "dress", "chat", [47.87, 14.47, 3.02], 1.61); stander(47.87, 14.47, 1.52, 1.76, "coat", "chat", [47.66, 13.07, 3.13], 2.06);
-  stander(46.79, 15.64, 1.41, 1.82, "slim", "chat", [47.42, 16.91, 2.81], 1.9); stander(47.42, 16.91, 1.31, 1.58, "coat", "chat", [46.79, 15.64, 2.91], 2.35);
-  stander(49.05, 17.19, 1.28, 1.66, "dress", "chat", [49.35, 18.57, 2.67], 0.19); stander(49.35, 18.57, 1.17, 1.74, "slim", "chat", [49.05, 17.19, 2.78], 0.64);
-  stander(48.12, 19.78, 1.08, 1.76, "slim", "chat", [48.65, 21.08, 2.47], 0.48); stander(48.65, 21.08, 0.97, 1.62, "dress", "chat", [48.12, 19.78, 2.58], 0.93);
+  // on the grey paving north and east of the church (the service road and the road above it), pairs scattered over it, and on the sidewalk along the road that rings the site to the west and south: talking, looking towards the church (positions measured on the model)
+  stander(13.35, 32.23, 0.06, 1.76, "slim", "chat", [13.95, 31.02, 1.56], 0.17); stander(13.95, 31.02, 0.06, 1.62, "dress", "chat", [13.35, 32.23, 1.56], 0.62);
+  stander(23.24, 27.99, 0.05, 1.8, "coat", "chat", [24.18, 28.97, 1.55], 0.48); stander(24.18, 28.97, 0.05, 1.6, "dress", "chat", [23.24, 27.99, 1.55], 0.93);
+  stander(39.81, -4.93, 3.05, 1.64, "dress", "chat", [38.48, -5.16, 4.54], 0.79); stander(38.48, -5.16, 3.04, 1.76, "coat", "chat", [39.81, -4.93, 4.55], 1.24);
+  stander(45.14, 32.95, 0.19, 1.82, "slim", "chat", [44.2, 33.92, 1.65], 1.1); stander(44.2, 33.92, 0.15, 1.58, "coat", "chat", [45.14, 32.95, 1.69], 1.55);
+  stander(46.25, 9.61, 1.91, 1.66, "dress", "chat", [46.04, 8.27, 3.51], 1.41); stander(46.04, 8.27, 2.01, 1.74, "slim", "chat", [46.25, 9.61, 3.41], 1.86);
+  stander(54.27, 32.61, 0.17, 1.76, "slim", "chat", [55.29, 33.49, 1.62], 1.72); stander(55.29, 33.49, 0.12, 1.62, "dress", "chat", [54.27, 32.61, 1.67], 2.17);
+  stander(47.08, 22.84, 0.82, 1.8, "coat", "chat", [46.75, 24.15, 2.22], 0.03); stander(46.75, 24.15, 0.72, 1.6, "dress", "chat", [47.08, 22.84, 2.32], 0.48);
+  stander(53.94, 22.94, 0.81, 1.64, "dress", "chat", [54.73, 24.03, 2.22], 0.34); stander(54.73, 24.03, 0.72, 1.76, "coat", "chat", [53.94, 22.94, 2.31], 0.79);
+  stander(8.18, 30.68, 0.05, 1.82, "slim", "chat", [9.02, 31.74, 1.56], 0.65); stander(9.02, 31.74, 0.06, 1.58, "coat", "chat", [8.18, 30.68, 1.55], 1.1);
+  stander(32.66, 30.71, 0.14, 1.66, "dress", "chat", [31.47, 30.09, 1.64], 0.96); stander(31.47, 30.09, 0.14, 1.74, "slim", "chat", [32.66, 30.71, 1.64], 1.41);
+  stander(47.03, 15.96, 1.39, 1.76, "slim", "chat", [46.84, 14.62, 3], 1.27); stander(46.84, 14.62, 1.5, 1.62, "dress", "chat", [47.03, 15.96, 2.89], 1.72);
+  stander(60.71, 26.03, 0.47, 1.8, "coat", "chat", [59.55, 26.73, 2.01], 1.58); stander(59.55, 26.73, 0.51, 1.6, "dress", "chat", [60.71, 26.03, 1.97], 2.03);
+  stander(58.68, 33.77, 0.08, 1.64, "dress", "chat", [59.61, 32.79, 1.63], 1.89); stander(59.61, 32.79, 0.13, 1.76, "coat", "chat", [58.68, 33.77, 1.58], 2.34);
+  stander(42.25, 5.74, 2.23, 1.82, "slim", "chat", [42.93, 4.58, 3.82], 0.2); stander(42.93, 4.58, 2.32, 1.58, "coat", "chat", [42.25, 5.74, 3.73], 0.65);
+  stander(2.01, 26.34, 0.05, 1.66, "dress", "chat", [3.05, 27.21, 1.55], 0.51); stander(3.05, 27.21, 0.05, 1.74, "slim", "chat", [2.01, 26.34, 1.55], 0.96);
+  stander(12.83, 27.69, 0.05, 1.76, "slim", "chat", [12.65, 29.03, 1.55], 0.82); stander(12.65, 29.03, 0.05, 1.62, "dress", "chat", [12.83, 27.69, 1.55], 1.27);
+  stander(33.79, -7.63, 3.09, 1.8, "coat", "chat", [34.83, -6.77, 4.59], 1.13); stander(34.83, -6.77, 3.09, 1.6, "dress", "chat", [33.79, -7.63, 4.59], 1.58);
+  stander(38.8, 31.62, 0.21, 1.64, "dress", "chat", [39.7, 32.62, 1.69], 1.44); stander(39.7, 32.62, 0.19, 1.76, "coat", "chat", [38.8, 31.62, 1.71], 1.89);
+  stander(28.93, 27.1, 0.13, 1.82, "slim", "chat", [30.22, 27.5, 1.66], 1.75); stander(30.22, 27.5, 0.16, 1.58, "coat", "chat", [28.93, 27.1, 1.63], 2.2);
+  stander(42.89, 26.13, 0.55, 1.66, "dress", "chat", [43.72, 25.06, 2.12], 0.06); stander(43.72, 25.06, 0.62, 1.74, "slim", "chat", [42.89, 26.13, 2.05], 0.51);
+  stander(50.24, 30.33, 0.31, 1.76, "slim", "chat", [50.8, 31.56, 1.75], 0.37); stander(50.8, 31.56, 0.25, 1.62, "dress", "chat", [50.24, 30.33, 1.81], 0.82);
+  stander(27.9, 32.77, 0.06, 1.8, "coat", "chat", [28.25, 31.46, 1.57], 0.68); stander(28.25, 31.46, 0.07, 1.6, "dress", "chat", [27.9, 32.77, 1.56], 1.13);
+  stander(34.7, 26.32, 0.34, 1.64, "dress", "chat", [33.45, 26.84, 1.77], 0.99); stander(33.45, 26.84, 0.27, 1.76, "coat", "chat", [34.7, 26.32, 1.84], 1.44);
+  stander(-1.33, 30.4, -0.02, 1.82, "slim", "chat", [0.02, 30.44, 1.56], 1.3); stander(0.02, 30.44, 0.06, 1.58, "coat", "chat", [-1.33, 30.4, 1.48], 1.75);
+  // the sidewalk
+  stander(-46.65, 25.95, -1.31, 1.66, "dress", "chat", [-47.74, 25.15, 0.19], 1.61); stander(-47.74, 25.15, -1.31, 1.74, "slim", "chat", [-46.65, 25.95, 0.19], 2.06);
+  stander(-5.66, -19.79, -2.09, 1.76, "slim", "chat", [-6.89, -19.24, -0.56], 1.92); stander(-6.89, -19.24, -2.06, 1.62, "dress", "chat", [-5.66, -19.79, -0.59], 2.37);
+  stander(1.82, -19.39, -2.2, 1.8, "coat", "chat", [3.08, -19.88, -0.72], 0.23); stander(3.08, -19.88, -2.22, 1.6, "dress", "chat", [1.82, -19.39, -0.7], 0.68);
+  stander(38.04, -18.33, -2.19, 1.64, "dress", "chat", [37.35, -19.48, -0.7], 0.54); stander(37.35, -19.48, -2.2, 1.76, "coat", "chat", [38.04, -18.33, -0.69], 0.99);
+  stander(-37.06, 1.63, -1.31, 1.82, "slim", "chat", [-37.78, 2.78, 0.19], 0.85); stander(-37.78, 2.78, -1.31, 1.58, "coat", "chat", [-37.06, 1.63, 0.19], 1.3);
+  stander(-27.23, -11.82, -1.7, 1.66, "dress", "chat", [-26.33, -12.83, -0.21], 1.16); stander(-26.33, -12.83, -1.71, 1.74, "slim", "chat", [-27.23, -11.82, -0.2], 1.61);
+  stander(-22.99, -17.64, -1.79, 1.76, "slim", "chat", [-22.4, -16.42, -0.29], 1.47); stander(-22.4, -16.42, -1.79, 1.62, "dress", "chat", [-22.99, -17.64, -0.29], 1.92);
+  stander(-32.18, -5.75, -1.31, 1.8, "coat", "chat", [-31, -6.41, 0.2], 1.78); stander(-31, -6.41, -1.3, 1.6, "dress", "chat", [-32.18, -5.75, 0.19], 2.23);
+  stander(17.8, -19.16, -2.33, 1.64, "dress", "chat", [16.47, -19.4, -0.82], 0.09); stander(16.47, -19.4, -2.32, 1.76, "coat", "chat", [17.8, -19.16, -0.83], 0.54);
+  stander(-16.02, -18.7, -1.9, 1.82, "slim", "chat", [-16.79, -19.81, -0.39], 0.4); stander(-16.79, -19.81, -1.89, 1.58, "coat", "chat", [-16.02, -18.7, -0.4], 0.85);
+  stander(30.84, -19.79, -2.28, 1.66, "dress", "chat", [31.61, -20.9, -0.77], 0.71); stander(31.61, -20.9, -2.27, 1.74, "slim", "chat", [30.84, -19.79, -0.78], 1.16);
+  stander(-43.61, 17.37, -1.31, 1.76, "slim", "chat", [-42.56, 18.22, 0.19], 1.02); stander(-42.56, 18.22, -1.31, 1.62, "dress", "chat", [-43.61, 17.37, 0.19], 1.47);
+  stander(-40.04, 9.3, -1.31, 1.8, "coat", "chat", [-39.58, 10.57, 0.19], 1.33); stander(-39.58, 10.57, -1.31, 1.6, "dress", "chat", [-40.04, 9.3, 0.19], 1.78);
+  stander(9.09, -18.86, -2.28, 1.64, "dress", "chat", [9.82, -19.99, -0.78], 1.64); stander(9.82, -19.99, -2.28, 1.76, "coat", "chat", [9.09, -18.86, -0.78], 2.09);
+  // the lower floors, seen in the sections: pairs near the faces of the two cuts (x < 20.5 and y > 3 are kept), on the upper level (+4.2), the exhibition rooms (+1.4), the room under the north side (0), the lecture hall and the basement (-2.65)
+  for (const [x, y, z, ph, dx] of [[18, 9.5, 4.46, 0.2, 1.3], [14, 3.8, 4.2, 0.9, -1.3], [5, 4, 1.4, 0.4, 1.3], [18, 14.5, 1.4, 1.1, 1.3], [16.5, 19.5, 0.05, 0.6, -1.3], [6.5, 19.5, 0.05, 1.3, 1.3], [6, 11, -2.65, 0.8, 1.3], [18.5, 8, -2.65, 1.5, 1.3], [8, 5.5, -2.65, 0.3, 1.3]]) {
+    const a = [x, y, z + 1.5], b = [x + dx, y + 0.4, z + 1.5];
+    stander(x, y, z, 1.74, "slim", "chat", b, ph, false, b); stander(x + dx, y + 0.4, z, 1.62, "dress", "chat", a, ph + 0.45, false, a);
+  }
   stander(17.7, -6.1, 4.11, 1.74, "slim", "chat", [18.7, -6.9, 5.54], 0.2, false, [16, -6.5, 5.4]); stander(18.7, -6.9, 4.04, 1.62, "dress", "chat", [17.7, -6.1, 5.61], 0.6, false, [16, -6.5, 5.4]);
   stander(25.2, -6.9, 3.56, 1.74, "slim", "chat", [26, -6.1, 5], 0.7, false, [16, -6.5, 5.4]); stander(26, -6.1, 3.5, 1.62, "dress", "chat", [25.2, -6.9, 5.06], 1.1, false, [16, -6.5, 5.4]);
   stander(30, -6.1, 3.2, 1.74, "slim", "chat", [31.1, -6.9, 4.62], 1.3, false, [16, -6.5, 5.4]); stander(31.1, -6.9, 3.12, 1.62, "dress", "chat", [30, -6.1, 4.7], 1.7, false, [16, -6.5, 5.4]);
@@ -552,7 +580,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     }
   }
 
-  function ghostSetup() { ghostPlane.copy(cutPlane).negate(); ghostMat.opacity = (lite ? 0.10 : 0.06) * cutK; ghostEdge.opacity = (lite ? 0.14 : 0.09) * cutK; }      // the desktop finish brightens it: fainter there
+  function ghostSetup() { ghostPlane.copy(cutPlane).negate(); ghostMat.opacity = (lite ? 0.24 : 0.16) * cutK; ghostEdge.opacity = (lite ? 0.38 : 0.28) * cutK; }      // the desktop finish brightens it: fainter there
   function drawGhost() {                                               // phones: straight onto the canvas, over the scene's own depth
     if (cutK <= 0.001) return;
     ghostSetup();
@@ -856,10 +884,21 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     if (nat) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
     if (root.classList.contains("is-fs")) { pseudoFs(false); return; }
     const req = root.requestFullscreen || root.webkitRequestFullscreen;
-    if (req) { try { const p = req.call(root); if (p && p.catch) p.catch(() => pseudoFs(true)); return; } catch (e) { /* fall through */ } }
+    if (req) { try { const p = req.call(root); if (p && p.catch) p.catch(() => pseudoFs(true)); setTimeout(() => { if (!(document.fullscreenElement || document.webkitFullscreenElement) && !root.classList.contains("is-fs")) pseudoFs(true); }, 600); return; } catch (e) { /* fall through */ } }      // a browser (or an embedding frame) that neither grants nor refuses: the full-window layer after 0.6 s
     pseudoFs(true);
   };
   fsBtn?.addEventListener("click", toggleFs);
+  const fsLabel = () => { const on = !!(document.fullscreenElement || document.webkitFullscreenElement) || root.classList.contains("is-fs"), s = fsBtn?.querySelector("span"); if (s) s.textContent = on ? "Exit full screen" : "Full screen"; if (fsBtn) fsBtn.title = on ? "Exit full screen" : "Full screen"; };
+  new MutationObserver(fsLabel).observe(root, { attributes: true, attributeFilter: ["class"] });
+  // save image: the view as a PNG on the page's background, named after the project, the view and the date and time
+  q('[data-act="shot"]')?.addEventListener("click", () => { shotReq = true; dirty = true; });
+  function saveShot() {
+    const src = renderer.domElement, c = document.createElement("canvas"); c.width = src.width; c.height = src.height;
+    const g = c.getContext("2d"); g.fillStyle = getComputedStyle(stage).backgroundColor || "#fff"; if (/rgba\(.*, 0\)|transparent/.test(g.fillStyle)) g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(src, 0, 0);
+    const d = new Date(), p2 = (n) => String(n).padStart(2, "0"), view = (SCENES[sceneI]?.name || "view").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const name = `Saint-Pierre-Firminy_${view}_${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}.png`;
+    c.toBlob((b) => { if (!b) return; const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, "image/png");
+  }
   window.addEventListener("keydown", (e) => { if (e.key === "Escape" && root.classList.contains("is-fs")) pseudoFs(false); });
   for (const ev of ["fullscreenchange", "webkitfullscreenchange"]) document.addEventListener(ev, () => { resize(); setTimeout(resize, 80); });
   controls.addEventListener("start", () => { userMoved = true; controls.autoRotate = false; autoBtn?.classList.remove("on"); clearTimeout(idleTimer); tween = null; siteLock = false; takeOver(); });
@@ -1046,6 +1085,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     if (shadowStale) { renderer.shadowMap.needsUpdate = true; shadowStale = false; }
     if (lite) { renderer.toneMappingExposure = EXPOSURE * 0.36 * (1 + 0.35 * cutK) * (1 + 0.7 * nightK); renderer.render(scene, camera); } else composer.render();
     if (lite) drawGhost();
+    if (shotReq) { shotReq = false; saveShot(); }                      // read the canvas in the same frame it was drawn
     rawCam();
     if (lite && prCap > 1 && (tween || controls.autoRotate)) {          // frame-rate guard while the camera is animating
       if (lastR) { perfSum += now - lastR; perfN++; } lastR = now;
@@ -1233,7 +1273,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   const NAVY = DIAG.road, RED = DIAG.sidewalk, BUB = { parking: [NAVY, 0xf2a093], sport: [DIAG.sport, RED], pitch: [DIAG.sport, RED] };          // bubbles: fill, hatching
   const hx = (c) => "#" + c.toString(16).padStart(6, "0");
   const SW = {                                                // the key's samples, drawn like the map
-    road: `<svg viewBox="0 0 26 12"><path d="M1 6h15" stroke="${hx(NAVY)}" stroke-width="2.6" stroke-dasharray="4.5 2.5" fill="none"/><path d="M17.5 1.8 23 6l-5.5 4.2" stroke="${hx(NAVY)}" stroke-width="2.3" fill="none"/></svg>`,
+    road: `<svg viewBox="0 0 26 12"><path d="M1 6h16" stroke="${hx(NAVY)}" stroke-width="3.9" fill="none"/><path d="M17 1.4 23 6l-6 4.6" stroke="${hx(NAVY)}" stroke-width="3.4" fill="none"/></svg>`,
     ped: `<svg viewBox="0 0 26 12"><path d="M7.5 6h11" stroke="${hx(RED)}" stroke-width="6" stroke-dasharray="1.2 1.3" fill="none"/><path d="M1 6l6.5-4.8v9.6zM25 6l-6.5-4.8v9.6z" fill="${hx(RED)}"/></svg>`,
     hat: ([f, h]) => `<i class="hat" style="--c:${hx(f)};--h:${hx(h)}"></i>`,
     fn: (f) => `<i class="fn" style="--c:${hx(f)}"></i>`,
@@ -1302,11 +1342,11 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
       };
       const roadM = mk(NAVY, 1), pedM = mk(RED, 1);
       for (const r of c.road) {
-        const { L, at } = path(r.p), main = r.w >= 2, h = main ? 1.3 : 0.8, dash = main ? 8 : 5, gap = main ? 5 : 4, arm = main ? 9 : 6, pos = [];
+        const { L, at } = path(r.p), main = r.w >= 2, h = main ? 1.95 : 1.2, arm = main ? 9 : 6, pos = [];          // a continuous line, half as thick again as the old dashes
         if (L < 2 * arm) continue;
         const head0 = !r.o && r.e[0], head1 = r.o || r.e[1];       // heads where the traffic carries on beyond the map; on a one-way street, the way it runs
         const s0 = head0 ? 2 * h : 0, s1 = head1 ? L - 2 * h : L;
-        for (let d = s0; d < s1; d += dash + gap) band(pos, at, d, Math.min(d + dash, s1), h);
+        band(pos, at, s0, s1, h);
         if (head1) chevron(pos, at(L), 1, arm, h);
         if (head0) chevron(pos, at(0), -1, arm, h);
         add(pos, roadM, 21);

@@ -1504,11 +1504,11 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     root.querySelector(".v3-panel").addEventListener("pointerdown", () => { idleT = 0; if (spinMul < 1) controls.autoRotate = false; });
     if (coarse) new IntersectionObserver((e) => { touchRatio = e[0].intersectionRatio; setTouch(); }, { threshold: [0, 0.5, 0.85, 1] }).observe(stage);
   }
-  // big screens: a row of buttons under the controls, one per view, straight to it
+  // big screens: a column of buttons at the right edge of the view, one per view, straight to it
   const VIEW_LABELS = { intro: "Church", site: "Site", light: "Light", p14: "Plan +14", p55: "Plan +5.5", p2: "Plan +2", sWE: "Section W–E", sNS: "Section N–S" };
   { const row = document.createElement("div"); row.className = "v3-views"; row.setAttribute("role", "toolbar"); row.setAttribute("aria-label", "Views");
     SCENES.forEach((S, j) => { const b = document.createElement("button"); b.type = "button"; b.textContent = VIEW_LABELS[S.id] || S.name; b.title = S.name; b.addEventListener("click", () => { setMode("take"); setEnded(false); enterScene(j); }); row.appendChild(b); viewBtns.push(b); });
-    q(".v3-bar")?.after(row); }
+    stage.appendChild(row); }
   // take-over controls: previous / play / next and info; per scene the sun, the day of the year, or day / night
   q('[data-act="prev"]')?.addEventListener("click", () => { setMode("take"); enterScene((sceneI + SCENES.length - 1) % SCENES.length); });
   q('[data-act="next"]')?.addEventListener("click", () => { setMode("take"); enterScene((sceneI + 1) % SCENES.length); });

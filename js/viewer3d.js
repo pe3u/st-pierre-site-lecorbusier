@@ -404,35 +404,38 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   // outside: pairs standing on the sidewalks and paths of the surroundings (not on the roads), talking and looking towards the church; positions measured on the model
   stander(-62, 43.5, -2.82, 1.76, "slim", "chat", [-60.5, 43.5, -1.33], 0.10); stander(-60.5, 43.5, -2.83, 1.63, "dress", "chat", [-62, 43.5, -1.3199999999999998], 0.55);
   stander(-63.5, 48, -2.82, 1.8, "coat", "chat", [-65, 49.5, -1.3199999999999998], 0.23); stander(-65, 49.5, -2.82, 1.6, "dress", "chat", [-63.5, 48, -1.3199999999999998], 0.66);
-  stander(44.5, 45, 0.19, 1.62, "dress", "chat", [43, 45, 1.69], 0.36); stander(43, 45, 0.19, 1.78, "slim", "chat", [44.5, 45, 1.69], 0.77);
   stander(89.5, 52.5, -2.81, 1.74, "slim", "chat", [91, 54, -1.31], 0.49); stander(91, 54, -2.81, 1.66, "coat", "chat", [89.5, 52.5, -1.31], 0.88);
-  stander(67, 15, -1.33, 1.76, "slim", "chat", [65.5, 13.5, 0.1299999999999999], 0.62); stander(65.5, 13.5, -1.37, 1.63, "dress", "chat", [67, 15, 0.16999999999999993], 0.99);
-  stander(64, 10.5, -1.45, 1.8, "coat", "chat", [65.5, 12, 0.1100000000000001], 0.75); stander(65.5, 12, -1.39, 1.6, "dress", "chat", [64, 10.5, 0.050000000000000044], 1.10);
   stander(52, -24, -2.84, 1.62, "dress", "chat", [53.5, -24, -1.3399999999999999], 0.88); stander(53.5, -24, -2.84, 1.78, "slim", "chat", [52, -24, -1.3399999999999999], 1.21);
   stander(49, -49.5, -2.85, 1.74, "slim", "chat", [49, -51, -1.35], 1.01); stander(49, -51, -2.85, 1.66, "coat", "chat", [49, -49.5, -1.35], 1.32);
   stander(19, -43.5, -2.83, 1.76, "slim", "chat", [19, -45, -1.33], 1.14); stander(19, -45, -2.83, 1.63, "dress", "chat", [19, -43.5, -1.33], 1.43);
   stander(-14, -52.5, -2.84, 1.8, "coat", "chat", [-14, -54, -1.3399999999999999], 1.27); stander(-14, -54, -2.84, 1.6, "dress", "chat", [-14, -52.5, -1.3399999999999999], 1.54);
   stander(-48.5, -18, -2.84, 1.62, "dress", "chat", [-50, -19.5, -1.3399999999999999], 1.40); stander(-50, -19.5, -2.84, 1.78, "slim", "chat", [-48.5, -18, -1.3399999999999999], 1.65);
   stander(-60.5, -16.5, -2.84, 1.74, "slim", "chat", [-59, -16.5, -1.3399999999999999], 1.53); stander(-59, -16.5, -2.84, 1.66, "coat", "chat", [-60.5, -16.5, -1.3399999999999999], 1.76);
-  // along the paths that ring the church: more pairs, talking and looking towards it (positions measured on the paving)
-  stander(-30.5, 15, -1.31, 1.78, "coat", "chat", [-29.5, 14, 0.18999999999999995], 0.20); stander(-29.5, 14, -1.31, 1.62, "dress", "chat", [-30.5, 15, 0.18999999999999995], 0.70);
-  stander(-12.5, 32, -1.3, 1.74, "slim", "chat", [-13.5, 31, 0.19999999999999996], 0.37); stander(-13.5, 31, -1.3, 1.66, "dress", "chat", [-12.5, 32, 0.19999999999999996], 0.79);
-  stander(-7.5, 39, -1.31, 1.6, "dress", "chat", [-9.5, 39, 0.18999999999999995], 0.54); stander(-9.5, 39, -1.31, 1.8, "slim", "chat", [-7.5, 39, 0.18999999999999995], 0.88);
-  stander(28.5, 29, 0.09, 1.82, "slim", "chat", [29.5, 30, 1.6], 0.71); stander(29.5, 30, 0.1, 1.58, "coat", "chat", [28.5, 29, 1.59], 0.97);
-  stander(51.5, 28, 0.46, 1.64, "dress", "chat", [52.5, 27, 2.01], 0.88); stander(52.5, 27, 0.51, 1.76, "coat", "chat", [51.5, 28, 1.96], 1.06);
-  stander(46.5, 15, 1.46, 1.78, "coat", "chat", [45.5, 14, 3.05], 1.05); stander(45.5, 14, 1.55, 1.62, "dress", "chat", [46.5, 15, 2.96], 1.15);
-  stander(44.5, 9, 1.97, 1.74, "slim", "chat", [45.5, 8, 3.53], 1.22); stander(45.5, 8, 2.03, 1.66, "dress", "chat", [44.5, 9, 3.4699999999999998], 1.24);
-  stander(36.5, -6, 3.06, 1.6, "dress", "chat", [34.5, -6, 4.59], 1.39); stander(34.5, -6, 3.09, 1.8, "slim", "chat", [36.5, -6, 4.5600000000000005], 1.33);
-  stander(40.5, -21, -2.29, 1.82, "slim", "chat", [39.5, -22, -0.81], 1.56); stander(39.5, -22, -2.31, 1.58, "coat", "chat", [40.5, -21, -0.79], 1.42);
-  stander(20.5, -26, -2.48, 1.64, "dress", "chat", [20.5, -24, -0.98], 1.73); stander(20.5, -24, -2.48, 1.76, "coat", "chat", [20.5, -26, -0.98], 1.51);
-  stander(-4.5, -24, -2.26, 1.78, "coat", "chat", [-3.5, -23, -0.77], 1.90); stander(-3.5, -23, -2.27, 1.62, "dress", "chat", [-4.5, -24, -0.7599999999999998], 1.60);
-  stander(-9.5, -23, -2.17, 1.74, "slim", "chat", [-10.5, -24, -0.6600000000000001], 2.07); stander(-10.5, -24, -2.16, 1.66, "dress", "chat", [-9.5, -23, -0.6699999999999999], 1.69);
-  stander(-30.5, 12, -1.31, 1.6, "dress", "chat", [-29.5, 11, 0.18999999999999995], 2.24); stander(-29.5, 11, -1.31, 1.8, "slim", "chat", [-30.5, 12, 0.18999999999999995], 1.78);
   citySink = null;
   // on the ramp up to the entrance: pairs standing and talking, looking towards the door
   stander(22, -6.9, 3.8, 1.76, "slim", "chat", [24, -6.1, 5.15], 0.1, false, [16, -6.5, 5.4]); stander(24, -6.1, 3.65, 1.62, "dress", "chat", [22, -6.9, 5.3], 0.60, false, [16, -6.5, 5.4]);
   stander(27, -6.1, 3.43, 1.8, "coat", "chat", [28.7, -6.9, 4.8100000000000005], 0.35, false, [16, -6.5, 5.4]); stander(28.7, -6.9, 3.31, 1.64, "dress", "chat", [27, -6.1, 4.93], 0.85, false, [16, -6.5, 5.4]);
   stander(20, -6, 3.94, 1.66, "dress", "chat", [19.9, -7, 5.45], 0.6, false, [16, -6.5, 5.4]); stander(19.9, -7, 3.95, 1.74, "slim", "chat", [20, -6, 5.4399999999999995], 1.10, false, [16, -6.5, 5.4]);
+  // on the service road that winds up from the east to the foot of the ramp, and more on the ramp: pairs talking, looking towards the church (positions measured on the road)
+  stander(32.66, -7, 3.09, 1.76, "slim", "chat", [34.04, -6.7, 4.59], 0.13); stander(34.04, -6.7, 3.09, 1.62, "dress", "chat", [32.66, -7, 4.59], 0.58);
+  stander(34.64, -5.18, 3.09, 1.8, "coat", "chat", [36.06, -5.13, 4.56], 0.42); stander(36.06, -5.13, 3.06, 1.6, "dress", "chat", [34.64, -5.18, 4.59], 0.87);
+  stander(37.18, -6.16, 3.07, 1.64, "dress", "chat", [38.42, -5.48, 4.55], 0.71); stander(38.42, -5.48, 3.05, 1.76, "coat", "chat", [37.18, -6.16, 4.57], 1.16);
+  stander(38.38, -3.76, 2.98, 1.82, "slim", "chat", [39.65, -3.12, 4.45], 1); stander(39.65, -3.12, 2.95, 1.58, "coat", "chat", [38.38, -3.76, 4.48], 1.45);
+  stander(41.11, -3.47, 3, 1.66, "dress", "chat", [41.82, -2.25, 4.39], 1.29); stander(41.82, -2.25, 2.89, 1.74, "slim", "chat", [41.11, -3.47, 4.5], 1.74);
+  stander(41.03, -0.77, 2.77, 1.76, "slim", "chat", [41.9, 0.34, 4.18], 1.58); stander(41.9, 0.34, 2.68, 1.62, "dress", "chat", [41.03, -0.77, 4.27], 2.03);
+  stander(43.44, 0.54, 2.66, 1.8, "coat", "chat", [43.71, 1.92, 4.04], 1.87); stander(43.71, 1.92, 2.54, 1.6, "dress", "chat", [43.44, 0.54, 4.16], 2.32);
+  stander(42.7, 3.16, 2.44, 1.64, "dress", "chat", [43.41, 4.39, 3.84], 0.16); stander(43.41, 4.39, 2.34, 1.76, "coat", "chat", [42.7, 3.16, 3.94], 0.61);
+  stander(44.91, 4.75, 2.32, 1.82, "slim", "chat", [45.06, 6.16, 3.71], 0.45); stander(45.06, 6.16, 2.21, 1.58, "coat", "chat", [44.91, 4.75, 3.82], 0.9);
+  stander(44.01, 7.32, 2.1, 1.66, "dress", "chat", [44.66, 8.57, 3.49], 0.74); stander(44.66, 8.57, 1.99, 1.74, "slim", "chat", [44.01, 7.32, 3.6], 1.19);
+  stander(46.23, 8.89, 1.96, 1.76, "slim", "chat", [46.47, 10.28, 3.35], 1.03); stander(46.47, 10.28, 1.85, 1.62, "dress", "chat", [46.23, 8.89, 3.46], 1.48);
+  stander(45.45, 11.49, 1.76, 1.8, "coat", "chat", [46.13, 12.73, 3.15], 1.32); stander(46.13, 12.73, 1.65, 1.6, "dress", "chat", [45.45, 11.49, 3.26], 1.77);
+  stander(47.66, 13.07, 1.63, 1.64, "dress", "chat", [47.87, 14.47, 3.02], 1.61); stander(47.87, 14.47, 1.52, 1.76, "coat", "chat", [47.66, 13.07, 3.13], 2.06);
+  stander(46.79, 15.64, 1.41, 1.82, "slim", "chat", [47.42, 16.91, 2.81], 1.9); stander(47.42, 16.91, 1.31, 1.58, "coat", "chat", [46.79, 15.64, 2.91], 2.35);
+  stander(49.05, 17.19, 1.28, 1.66, "dress", "chat", [49.35, 18.57, 2.67], 0.19); stander(49.35, 18.57, 1.17, 1.74, "slim", "chat", [49.05, 17.19, 2.78], 0.64);
+  stander(48.12, 19.78, 1.08, 1.76, "slim", "chat", [48.65, 21.08, 2.47], 0.48); stander(48.65, 21.08, 0.97, 1.62, "dress", "chat", [48.12, 19.78, 2.58], 0.93);
+  stander(17.7, -6.1, 4.11, 1.74, "slim", "chat", [18.7, -6.9, 5.54], 0.2, false, [16, -6.5, 5.4]); stander(18.7, -6.9, 4.04, 1.62, "dress", "chat", [17.7, -6.1, 5.61], 0.6, false, [16, -6.5, 5.4]);
+  stander(25.2, -6.9, 3.56, 1.74, "slim", "chat", [26, -6.1, 5], 0.7, false, [16, -6.5, 5.4]); stander(26, -6.1, 3.5, 1.62, "dress", "chat", [25.2, -6.9, 5.06], 1.1, false, [16, -6.5, 5.4]);
+  stander(30, -6.1, 3.2, 1.74, "slim", "chat", [31.1, -6.9, 4.62], 1.3, false, [16, -6.5, 5.4]); stander(31.1, -6.9, 3.12, 1.62, "dress", "chat", [30, -6.1, 4.7], 1.7, false, [16, -6.5, 5.4]);
   // inside: pairs standing and talking, looking up at the star wall and the roof lights
   stander(10, 16, 5.2, 1.72, "slim", "chat", [8, 18.5, 5.42 + 1.5], 0.1, false, [6.5, 20.5, 12]); stander(8, 18.5, 5.42, 1.70, "dress", "chat", [10, 16, 5.2 + 1.5], 0.8, false, [6.5, 20.5, 12]);
   stander(14, 17.5, 5.4, 1.66, "dress", "chat", [11.5, 17.5, 5.4 + 1.5], 0.5, false, [6.5, 20.5, 12]); stander(11.5, 17.5, 5.4, 1.68, "coat", "chat", [14, 17.5, 5.4 + 1.5], 0.6, false, [6.5, 20.5, 12]);
@@ -871,7 +874,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
       const off = persp.position.clone().sub(controls.target), sp = new THREE.Spherical().setFromVector3(off), want = new THREE.Spherical().setFromVector3(heroPos().clone().sub(heroTgt()));
       sp.radius = want.radius; sp.phi = want.phi; controls.target.copy(heroTgt()); persp.position.setFromSpherical(sp).add(controls.target);
     }
-    persp.aspect = w / h; fovWant = lens30 ? 2 * Math.atan(0.6 / Math.max(1, w / h)) * 180 / Math.PI : (w / h < 1 ? Math.min(60, 26 / Math.max(0.5, w / h)) : 26);      // lens30: a 30 mm lens, its 36 mm side on the long side of the view
+    persp.aspect = w / h; fovWant = lens30 ? 2 * Math.atan(0.9 / Math.max(1, w / h)) * 180 / Math.PI : (w / h < 1 ? Math.min(60, 26 / Math.max(0.5, w / h)) : 26);      // lens30: a 30 mm lens, its 36 mm side on the long side of the view
     if (!fovSet) { fovSet = true; persp.fov = fovWant; } persp.updateProjectionMatrix();
     const vh = 66, vw = vh * (w / h); ortho.left = -vw / 2; ortho.right = vw / 2; ortho.top = vh / 2; ortho.bottom = -vh / 2; ortho.updateProjectionMatrix();
     if (onResize) onResize();
@@ -1097,8 +1100,9 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     { id: "sWE", name: "Cross section W–E", kind: "cut", dur: 7, text: "West–east section: the square base with its floors below, the nave above, and the shell rising 33 m to the sloping circular roof." },
     { id: "sNS", name: "Cross section N–S", kind: "cut", dur: 7, text: "North–south section: the walls lean as the plan turns from a square at the base to a circle at the top, cut on a slant 33 m up." },
   ];
-  // floor areas measured in the model (Blender metres; the floor under each plan cut); names after the published programme
-  const AREAS = { p14: [["Nave", 429, 12.66, 11.09, 6.0], ["Landing", 21, 18.61, 19.83, 7.6]], p55: [["Exhibition rooms", 259, 15.55, 7.58, 1.4]], p2: [["Lecture hall · exhibition", 148, 12.92, 9.29, -1.3]] };
+  // floor areas measured in the model (Blender metres; the floor under each plan cut); names after the published programme. Each name stands on clear floor
+  // (found on the model: no pews, no walls or slabs over it), so that it reads
+  const AREAS = { p14: [["Nave", 429, 7, 16, 6.0], ["Landing", 21, 18.61, 19.83, 7.6]], p55: [["Exhibition rooms", 259, 4.75, 4.25, 1.4]], p2: [["Lecture hall · exhibition", 148, 12.92, 9.29, -1.3]] };
   let mode = "play", sceneI = 0, sceneT = 0, idleT = 0, firstRun = true, lightPhase = 0, nightOn = false, enhanced = false, poiT = 99;
   let ended = false, booted = false, lightT = 0, lightFrom = 10, diagK = 0, enhGoal = 1, discGoal = 1;        // ended: the auto play has run once and rests on the intro's spin
   const ov = document.createElement("div"); ov.className = "v3-ov";
@@ -1129,14 +1133,14 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   // sections, after the usual drawings: floor-to-floor dimensions up the left side, level marks (a line across, a triangle and the level's name) on the right,
   // and the names of the spaces with their areas on the cut
   const FLOORS = [-1.3, 1.4, 6.0, TOP], LEVELS = [[-1.3, "Lecture hall"], [0, "Entrance"], [1.4, "Exhibition"], [6.0, "Nave"], [TOP, "Top of the shell"]];
-  const SPACES = [["Nave", 429, 12.66, 11.09, 10.5], ["Exhibition rooms", 259, 15.55, 7.58, 2.9], ["Lecture hall", 148, 12.92, 9.29, 0.1]];
+  const SPACES = [["Nave", 429, 12.66, 11.09, 10.5], ["Exhibition rooms", 259, 15.55, 7.58, 3.6], ["Lecture hall", 148, 12.92, 9.29, -0.2]];     // name, area, a point inside (Blender x, y), the height of its name
   const secSide = new THREE.Vector3(), secOn = () => lens30 && opened && cutK > 0.9 && !angTween && SCENES[sceneI].kind === "cut";
   const sideNow = () => secSide.set(-cutDir.z, 0, cutDir.x);                                 // along the cut, towards the left of the screen
   const edgeL = () => { sideNow(); return secSide.x * 0.15 - secSide.z * 1.65 + 25.3 / 2; };      // the left side of the church on screen, measured along the cut
   const onCut = (v, along, y) => { sideNow(); return v.copy(cutDir).multiplyScalar(cutS + 0.05).addScaledVector(secSide, along).setY(y); };
   for (let i = 0; i + 1 < FLOORS.length; i++) { const a = FLOORS[i], b = FLOORS[i + 1]; mkTag((b - a).toFixed(2), "v3-dim v3-sdim", new THREE.Vector3(), () => secOn(), 0, (p) => onCut(p, edgeL() + 2.9, (a + b) / 2), "translate(-100%, -50%)"); }
   for (const [z, nm] of LEVELS) mkTag(`${lvTxt(z)} <i>${nm}</i>`, "v3-lvl v3-lvsec", new THREE.Vector3(), () => secOn(), 0, (p) => onCut(p, edgeL() - 25.3 - 3.4, z + 0.25), "translate(-100%, -100%)");
-  for (const [nm, a, x, y, h] of SPACES) { const q = b2t(x, y, 0); mkTag(`<b>${nm}</b><em>${a} m²</em>`, "v3-area", new THREE.Vector3(), () => secOn() && !cutMoved, 0, (p) => onCut(p, sideNow().dot(q), h)); }
+  const spaceTags = SPACES.map(([nm, a, x, y, h]) => { const q = b2t(x, y, 0), t = mkTag(`<b>${nm}</b><em>${a} m²</em>`, "v3-area", new THREE.Vector3(), () => secOn() && !cutMoved, 0, (p) => onCut(p, sideNow().dot(q), h)); Object.assign(t, { nm, a, q, h }); return t; });
   const lvlMat = new THREE.LineDashedMaterial({ color: 0x1d1f22, dashSize: 0.3, gapSize: 0.45, depthTest: false, transparent: true, opacity: 0.6 });
   const dotMat = new THREE.LineDashedMaterial({ color: 0x2c2f33, dashSize: 0.16, gapSize: 0.2, depthTest: false, transparent: true, opacity: 0.9 });       // dimension lines: fine dots
   const markMat = new THREE.LineBasicMaterial({ color: 0x2c2f33, depthTest: false, transparent: true, opacity: 0.9 });                                         // their ticks and the level marks: thin, solid
@@ -1152,6 +1156,16 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     for (const [z] of LEVELS) {                                                             // each level: a dotted line across, then a small triangle standing on it
       lvl.push(P(L, z), P(R - 4.6, z)); const t = P(R - 4, z), a = P(R - 3.55, z + 0.8), b = P(R - 4.45, z + 0.8);
       mk.push(t, a, a, b, b, t.clone(), P(R - 4.9, z + 0.8), P(R - 3.1, z + 0.8));
+    }
+    for (const t of spaceTags) {                                                            // each space on the cut: its width between the walls and its height from floor to ceiling, measured on the model just behind the cut at the height of its name
+      const al = sideNow().dot(t.q), o = cutDir.clone().multiplyScalar(cutS - 0.15).addScaledVector(secSide, al).setY(t.h);
+      const r = castAll(o, secSide.clone())[0], l = castAll(o, secSide.clone().negate())[0], up = castAll(o, new THREE.Vector3(0, 1, 0))[0], dn = castAll(o, new THREE.Vector3(0, -1, 0))[0];
+      let sz = "";
+      if (r !== undefined && l !== undefined && r + l > 2) {
+        const y = t.h - 0.9, a = P(al + r, y), b = P(al - l, y); dim.push(a, b, P(al + r, y - 0.5), P(al + r, y + 0.5), P(al - l, y - 0.5), P(al - l, y + 0.5)); tk(a); tk(b);
+        sz = ` · ${(r + l).toFixed(2)}${up !== undefined && dn !== undefined && up + dn < 40 ? " × " + (up + dn).toFixed(2) : ""} m`;
+      }
+      const html = `<b>${t.nm}</b><em>${t.a} m²${sz}</em>`; if (t.e.innerHTML !== html) t.e.innerHTML = html;
     }
     swapLines(secRoot, dim, dotMat, 0); swapLines(secRoot, lvl, lvlMat, 1); swapLines(secRoot, mk, markMat, 2);
   }
@@ -1199,10 +1213,17 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     swapLines(planRoot, pts, dotMat, 0); swapLines(planRoot, mk, markMat, 1);
   }
   function updateTags(r) {
+    const boxes = [];                                       // a dimension figure that would lie over a room name or another figure already placed (the room names come first, and always show) is left out
     for (const t of tags) {
       let vis = notesOn && t.on(); if (vis) { if (t.at) t.at(t.p); dimV.copy(t.p).project(camera); vis = dimV.z < 1 && Math.abs(dimV.x) < 1.1 && Math.abs(dimV.y) < 1.1; }
+      const x = ((dimV.x + 1) / 2) * r.width, y = ((1 - dimV.y) / 2) * r.height + t.dy;
+      if (vis && t.an === "translate(-50%, -50%)" && /v3-(dim|area)/.test(t.e.className)) {
+        if (t.szKey !== t.e.innerHTML) { t.e.style.display = ""; t.sz = [t.e.offsetWidth, t.e.offsetHeight]; t.szKey = t.e.innerHTML; }     // measured once per text
+        const b = [x - t.sz[0] / 2 - 3, y - t.sz[1] / 2 - 2, x + t.sz[0] / 2 + 3, y + t.sz[1] / 2 + 2];
+        if (!t.e.classList.contains("v3-area") && boxes.some((q) => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1])) vis = false; else boxes.push(b);
+      }
       t.e.style.display = vis ? "" : "none";
-      if (vis) t.e.style.transform = `translate(${((dimV.x + 1) / 2) * r.width}px, ${((1 - dimV.y) / 2) * r.height + t.dy}px) ${t.an}`;
+      if (vis) t.e.style.transform = `translate(${x}px, ${y}px) ${t.an}`;
     }
   }
   function enhance(on) { const site = SCENES[sceneI].kind === "site"; enhGoal = on && site ? 0.4 : 1; discGoal = on ? (site ? 1.6 : 2.6) : 1; enhanced = on; arcBold.visible = on; arc.visible = !on; if (on && site) poiRoot.visible = true; applySun(); dirty = true; }     // the sun's size and strength ease to the new goal (director); the arrows: site view only
@@ -1306,7 +1327,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   const legend = document.createElement("div"); legend.className = "v3-legend"; legend.style.display = "none";
   legend.innerHTML = LEG.map(([k, t]) => (t ? `<span>${k}${t}</span>` : `<b>${k}</b>`)).join("");
   stage.appendChild(legend);
-  const DIAG_K = 0.5;                                          // the diagram is laid over the map at half strength
+  const DIAG_K = 0.7;                                          // the diagram is laid over the map at half strength
   function applyDiag(k) { const e = k * k * (3 - 2 * k); if (k > 0) buildCirc(); circRoot.visible = e > 0.01; for (const m of circMats) m.opacity = m.userData.op * e * DIAG_K; for (const d of diagMats) { const f = d.et ? e * DIAG_K : e; d.m.color.copy(d.c0).lerp(d.tint, f); if (d.lit) d.m.emissive.copy(d.e0).lerp(d.et || d.tint, f); } legend.style.opacity = e.toFixed(3); legend.style.display = e > 0.01 ? "" : "none"; dirty = true; }
   // at the end of the auto play the three buttons (take over, replay, more visuals) sit in a row just above the scene's name and words; back in their corner after
   const endBar = document.createElement("div"); endBar.className = "v3-endbar";
@@ -1374,7 +1395,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
       closeCut(); const v = siteView(); flyTo(v.p, v.t, 1600);
       if (S.kind === "site") easeSolar(10.5);
       else { lightFrom = 12 - halfDay() - 0.25; easeSolar(lightFrom, 1.6); lightT = -1.6; lightRun = true; }   // the day starts again at sunrise
-    } else { openCut(CUTS[S.id]); easeSolar(nightOn ? nightHour() : 12); siteLock = true; const v = sec ? secView() : planView(); if (!angTween) flyTo(v.p, v.t, 1600); syncCut(); }     // section to section: the camera turns with the cut
+    } else { const dawn = !nightOn && nightK > 0.3; openCut(CUTS[S.id]); easeSolar(nightOn ? nightHour() : 12, dawn ? 4.5 : 2.2); siteLock = true; const v = sec ? secView() : planView(); if (!angTween) flyTo(v.p, v.t, dawn ? 2800 : 1600); syncCut(); }     // section to section: the camera turns with the cut; out of the night the day comes back slowly     // section to section: the camera turns with the cut
     booted = true; dirty = true;
   }
   function director(dt) {

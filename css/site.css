@@ -589,3 +589,18 @@ h1 { cursor: pointer; }
 .pn-hint { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(20,18,15,.62); color: #f1eee8; font-size: 12.5px; letter-spacing: .02em; pointer-events: none; white-space: nowrap; transition: opacity .6s ease; animation: pn-hint-in 1.2s ease-out backwards; }
 .pn-hint.gone { opacity: 0; }
 @keyframes pn-hint-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translateX(-50%); } }
+
+/* the countdown line twice as thick, the time left in bold */
+.v3-count { height: 12px; }
+.v3-left { font-weight: 700; }
+/* the scene's name and words run the full width of the view */
+.v3-txt { max-width: none; } .v3-cap { max-width: none; }
+/* the diagram's key and the parking signs at the diagram's strength (70%) */
+.v3-legend i, .v3-legend svg { opacity: .7; }
+.v3-pk { background: rgba(56,147,210,.7); color: rgba(29,39,64,.75); box-shadow: 0 0 0 1.5px rgba(255,255,255,.7); }
+/* big screens: the buttons under the view twice as tall, in one row the width of the viewer */
+@media (min-width: 901px) {
+  .v3-panel .v3-bar { width: 100%; border-radius: 16px; }
+  .v3-panel .v3-bar button { flex: 1 1 0; justify-content: center; min-height: 62px; border-radius: 12px; font-size: 13px; }
+  .v3-panel .v3-bar svg { width: 19px; height: 19px; }
+}

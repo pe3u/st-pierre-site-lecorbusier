@@ -525,7 +525,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   planeViz.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(64, 44)), new THREE.LineBasicMaterial({ color: 0x222222, transparent: true, opacity: 0.35 })));
   planeViz.visible = false; scene.add(planeViz);
 
-  // ghost of the part the section removes: the same geometry, very faint, drawn in a second pass clipped by the opposite plane
+  // ghost of the part the section removes: its outlines only (the faces stay invisible, they only hide the edges behind them), drawn in a second pass clipped by the opposite plane
   const ghostScene = new THREE.Scene(), ghostPlane = new THREE.Plane(), ghostFloor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 2.9);      // ghostFloor: only above the terrain (y -2.9), the buried parts stay hidden
   const ghostMat = new THREE.MeshBasicMaterial({ color: 0x8c9196, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, depthFunc: THREE.LessEqualDepth, toneMapped: false });
   const ghostDepth = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });          // depth first: only the front-most ghost surface gets tinted, not every layer behind it
@@ -580,7 +580,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     }
   }
 
-  function ghostSetup() { ghostPlane.copy(cutPlane).negate(); ghostMat.opacity = (lite ? 0.24 : 0.16) * cutK; ghostEdge.opacity = (lite ? 0.38 : 0.28) * cutK; }      // the desktop finish brightens it: fainter there
+  function ghostSetup() { ghostPlane.copy(cutPlane).negate(); ghostMat.opacity = 0; ghostEdge.opacity = (lite ? 0.38 : 0.28) * cutK; }      // the desktop finish brightens it: fainter there
   function drawGhost() {                                               // phones: straight onto the canvas, over the scene's own depth
     if (cutK <= 0.001) return;
     ghostSetup();

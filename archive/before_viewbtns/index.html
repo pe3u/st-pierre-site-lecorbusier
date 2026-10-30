@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saint-Pierre, Firminy · a visual study</title>
+<meta name="description" content="An architectural concept panel for the church of Saint-Pierre in Firminy: an interactive spatial viewer, façades, a 360° interior and two day time-lapses.">
+<link rel="stylesheet" href="css/site.css">
+<style>
+  .controls button { appearance: none; border: 1px solid var(--line2); background: #fff; color: var(--ink2); font: inherit; font-size: 12px; padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: background .2s, color .2s; }
+  .controls button:hover { background: var(--wash); } .controls button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .ob-heights, .pn-views { display: inline-flex; gap: 4px; }
+  .ob-heights button { min-width: 30px; padding: 6px 0; }
+</style>
+<script type="importmap">{ "imports": { "three": "./lib/three/three.module.js", "three/addons/": "./lib/three/addons/" } }</script>
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#model"><b>Gradients</b><span>Saint-Pierre, Firminy · Le Corbusier</span></a>
+    <nav class="nav" aria-label="Sections"><a href="#model">Spatial</a><a href="#views">Views</a><a href="#interior">Inside</a><a href="#time">Day</a><a href="#idea">Idea</a></nav>
+  </div>
+</header>
+
+<main>
+<!-- ============================================================ 3D MODEL -->
+<section id="model" class="hero" style="border-top:0">
+  <div class="wrap">
+    <div class="hero-head">
+      <div>
+        <span class="label">Le Corbusier &amp; José Oubrerie</span>
+        <h1>Saint-Pierre,<br><em>Firminy</em><small>a visual study</small></h1>
+      </div>
+      <p class="hero-sub">Bare concrete, a square plan rising to a cone, and the sun as its only ornament.</p>
+    </div>
+
+    <div class="v3" id="v3">
+      <div class="v3-stage">
+        <div class="v3-help"><span class="v3-hint">drag to turn</span><span class="v3-how">move the sun with the slider<br>lights switch on at dusk</span></div>
+        <button type="button" class="v3-explore">Tap to explore</button>
+        <button type="button" class="v3-replay">Replay</button>
+        <button type="button" class="v3-more">More visuals ↓</button>
+        <div class="v3-facts"><b>≈ 33 m</b> cone height<br><b>≈ 25 m</b> square plan</div>
+        <div class="v3-notes"></div>
+        
+        <div class="v3-load"><span>Loading the model…</span><div class="bar"><i></i></div></div>
+      </div>
+      <svg class="v3-line" aria-hidden="true"><line x1="0" y1="0" x2="0" y2="0"/><circle r="3.5" cx="0" cy="0"/></svg>
+      <div class="v3-card" role="dialog" aria-live="polite"><button class="v3-close" aria-label="Close note">×</button><div class="v3-kicker"></div><h3></h3><p></p></div>
+      <div class="v3-panel"><div class="v3-bar" role="toolbar" aria-label="Viewer controls">
+          <button data-act="restart" title="Restart from the beginning"><svg viewBox="0 0 24 24"><path d="M6 5v14"/><path d="M18 5l-9 7 9 7z"/></svg><span>Restart</span></button>
+          <button data-act="prev" title="Previous view"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span>Previous</span></button>
+          <button data-act="play" title="Play, or resume the auto play from this view"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg><span>Play/Resume</span></button>
+          <button data-act="next" title="Next view"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg><span>Next</span></button>
+          <button data-act="notes" title="Info: notes, sun path, compass and dimensions"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5M12 16v.5"/></svg><span>Info</span></button>
+          <button data-act="full" title="Full screen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Full screen</span></button>
+          <button data-act="shot" title="Save this view as an image"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Save image</span></button>
+          <button data-act="vr"title="Enter VR (Meta Quest 3 browser)"><svg viewBox="0 0 24 24"><path d="M3 8h18v8h-5l-2-3h-4l-2 3H3z"/></svg><span>VR</span></button>
+        </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ VIEWS -->
+<section id="views">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="label"><b>01</b>Views</span></div>
+    
+    <div class="hero-views">
+      <figure class="big reveal" data-full="assets/img/view_hero_full.jpg"><img src="assets/img/view_hero.jpg" alt="The church from the north-east, early afternoon" loading="lazy"></figure>
+      <figure class="big reveal" data-full="assets/img/view_lawn_full.jpg"><img src="assets/img/view_lawn.jpg" alt="The tower from the west" loading="lazy"></figure>
+      <figure class="big reveal" data-full="assets/img/view_orion_full.jpg"><img src="assets/img/view_orion.jpg" alt="The east wall with the constellation" loading="lazy"></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ INTERIOR -->
+<section id="interior">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="label"><b>02</b>Interior</span>
+    </div>
+    <div class="hero-views interior-views">
+      <figure class="big reveal" data-full="assets/img/interior_1_full.jpg"><img src="assets/img/interior_1.jpg" alt="From the back of the nave towards the altar" loading="lazy"></figure>
+      <figure class="big reveal" data-full="assets/img/interior_2_full.jpg"><img src="assets/img/interior_2.jpg" alt="From the floor up to the ceiling" loading="lazy"></figure>
+      <figure class="big reveal" data-full="assets/img/interior_3_full.jpg"><img src="assets/img/interior_3.jpg" alt="From the ceiling down to the nave" loading="lazy"></figure>
+    </div>
+    <div style="margin-top:clamp(40px,6vw,90px)" class="reveal">
+      <div class="sec-head" style="margin-bottom:22px"><span class="label">360°</span></div>
+      <div id="pano">
+        <div class="stage pn-stage"><canvas></canvas><div class="pn-msg">Loading panorama…</div><div class="pn-hud"></div></div>
+        <div class="controls"><div class="grp"><span class="label">Viewpoint</span><span class="pn-views"></span></div><div class="grp"><span class="label">Zoom</span><button data-act="zout">−</button><button data-act="zin">+</button></div><button data-act="auto">Auto-rotate</button><span class="sp"></span><button data-act="full">Fullscreen</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ TIME -->
+<section id="time">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="label"><b>03</b>A day</span></div>
+    <div class="tls">
+      <div class="tl reveal"><div class="frame"><div class="tl-name">Outside</div><video src="assets/tl_exterior.mp4" data-start="5" data-end="20.5" data-hold="4" muted loop playsinline preload="metadata"></video><div class="tl-clock">06:00</div><div class="tl-sun">solar time</div></div>
+        <div class="tl-ctl"><button class="tool" data-act="play">Play</button><div class="tl-bar"><div class="tl-fill"></div></div></div>
+        </div>
+      <div class="tl reveal"><div class="frame"><div class="tl-name">Inside</div><video src="assets/tl_interior.mp4" data-start="5" data-end="14" data-hold="4" muted loop playsinline preload="metadata"></video><div class="tl-clock">06:00</div><div class="tl-sun">solar time</div></div>
+        <div class="tl-ctl"><button class="tool" data-act="play">Play</button><div class="tl-bar"><div class="tl-fill"></div></div></div>
+        </div>
+    </div>
+  </div>
+</section>
+<!-- ============================================================ IDEA -->
+<section id="idea">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="label"><b>04</b>Idea</span></div>
+    <div class="cols">
+      <div class="story reveal">
+        <p class="lead">A parish church for a new workers’ district, in concrete that lets the sun do the decorating.</p>
+        <p>Commissioned in 1961 by Father Roger Tardy for Firminy-Vert, on a former quarry.</p>
+        <p>A square plan climbs four levels into a truncated cone. Inside, no windows: roof cannons and a wall of small openings bring the sun in.</p>
+        <p>Le Corbusier died in 1965. José Oubrerie carried the building through stops and restarts to its opening in 2006.</p>
+      </div>
+      <aside class="side reveal">
+        <span class="label">Timeline</span>
+        <ul class="timeline" style="margin-top:12px">
+          <li><b>1961</b><span>Commission</span></li>
+          <li><b>1965</b><span>Le Corbusier dies</span></li>
+          <li><b>1970</b><span>First stone</span></li>
+          <li><b>1978</b><span>Works halted</span></li>
+          <li><b>2004</b><span>Works resume</span></li>
+          <li><b>2006</b><span>Opened</span></li>
+          <li><b>2009</b><span>Listed monument</span></li>
+        </ul>
+      </aside>
+    </div>
+    </div>
+</section>
+
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div><h5>About this panel</h5><p>A visual study of the church of Saint-Pierre, Firminy-Vert (Loire, France), by Le Corbusier and José Oubrerie. Interpretive visualisation; facts after the Fondation Le Corbusier.</p></div>
+    <div><h5>Sources</h5><p><a href="https://www.fondationlecorbusier.fr/en/work-architecture/achievements-eglise-saint-pierre-firminy-france-1960-2006/" target="_blank" rel="noopener">Fondation Le Corbusier — Église Saint-Pierre</a></p><p>Surroundings: map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL); building heights and roofs: <a href="https://geoservices.ign.fr/bdtopo" target="_blank" rel="noopener">IGN BD TOPO</a> (Licence Ouverte)</p></div>
+    <div><h5>Location</h5><p><a class="addr" href="https://www.google.com/maps/search/?api=1&amp;query=%C3%89glise+Saint-Pierre+Site+Le+Corbusier+Firminy" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-11.2A7 7 0 0 0 5 9.8C5 14.800 12 21 12 21z"/><circle cx="12" cy="9.800" r="2.400"/></svg>Site Le Corbusier, Firminy-Vert · 42700 Firminy, France</a></p></div>
+  </div>
+</footer>
+
+<div id="lightbox" role="dialog" aria-label="Image"><figure><img alt=""><figcaption></figcaption></figure></div>
+</body>
+</html>

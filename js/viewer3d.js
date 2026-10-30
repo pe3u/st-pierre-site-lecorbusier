@@ -1130,6 +1130,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
 
   // ---- the spatial viewer: auto play (a loop of scenes, each with its name, a typed caption and a countdown bar) and take over (any touch: the scene stays,
   // and the controls for it appear). The captions are sample texts for now.
+  const viewBtns = [];                                            // the big screens' view buttons (filled in below), the current view lit
   const SCENES = [
     { id: "intro", name: "Église Saint-Pierre", kind: "intro", dur: 15, text: "Le Corbusier's last church, designed from 1960 for Firminy-Vert. Left unfinished in 1978, completed by José Oubrerie in 2006." },
     { id: "site", name: "Site: Site Le Corbusier", kind: "site", dur: 10, text: "The church, the Maison de la Culture, the stadium, the swimming pool and the Unité d'habitation: the largest group of Le Corbusier's works in Europe." },
@@ -1423,6 +1424,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     sceneI = i; sceneT = 0; lightPhase = 0; lightRun = false; cutMoved = false; solarTween = null; const S = SCENES[i], play = mode === "play";
     root.dataset.scene = S.kind; sceneEl.textContent = S.name; typeCap(S.text);
     for (const [act, k] of [["prev", -1], ["next", 1]]) { const b = q(`[data-act="${act}"]`), nm = SCENES[(i + k + SCENES.length) % SCENES.length].name; if (b) b.title = (k < 0 ? "Previous: " : "Next: ") + nm; }     // the buttons say Previous and Next; the view they lead to is in their tooltip
+    viewBtns.forEach((b, j) => b.classList.toggle("on", j === i));
     controls.autoRotate = false; spinSun = false; spinMul = 1; tween = null; camAzPrev = null; userMoved = S.kind !== "intro";
     easeSolar(solar);                                       // the sun keeps its hour and swings back to its own place; the scenes below set their own hours
     enhance(S.kind === "site" || S.kind === "light"); siteLock = S.kind === "site" || S.kind === "light";
@@ -1502,6 +1504,11 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     root.querySelector(".v3-panel").addEventListener("pointerdown", () => { idleT = 0; if (spinMul < 1) controls.autoRotate = false; });
     if (coarse) new IntersectionObserver((e) => { touchRatio = e[0].intersectionRatio; setTouch(); }, { threshold: [0, 0.5, 0.85, 1] }).observe(stage);
   }
+  // big screens: a row of buttons under the controls, one per view, straight to it
+  const VIEW_LABELS = { intro: "Church", site: "Site", light: "Light", p14: "Plan +14", p55: "Plan +5.5", p2: "Plan +2", sWE: "Section W–E", sNS: "Section N–S" };
+  { const row = document.createElement("div"); row.className = "v3-views"; row.setAttribute("role", "toolbar"); row.setAttribute("aria-label", "Views");
+    SCENES.forEach((S, j) => { const b = document.createElement("button"); b.type = "button"; b.textContent = VIEW_LABELS[S.id] || S.name; b.title = S.name; b.addEventListener("click", () => { setMode("take"); setEnded(false); enterScene(j); }); row.appendChild(b); viewBtns.push(b); });
+    q(".v3-bar")?.after(row); }
   // take-over controls: previous / play / next and info; per scene the sun, the day of the year, or day / night
   q('[data-act="prev"]')?.addEventListener("click", () => { setMode("take"); enterScene((sceneI + SCENES.length - 1) % SCENES.length); });
   q('[data-act="next"]')?.addEventListener("click", () => { setMode("take"); enterScene((sceneI + 1) % SCENES.length); });

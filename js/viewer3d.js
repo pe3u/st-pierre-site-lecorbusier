@@ -905,7 +905,7 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
     c.toBlob((b) => { if (!b) return; const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, "image/png");
   }
   window.addEventListener("keydown", (e) => { if (e.key === "Escape" && root.classList.contains("is-fs")) pseudoFs(false); });
-  for (const ev of ["fullscreenchange", "webkitfullscreenchange"]) document.addEventListener(ev, () => { resize(); setTimeout(resize, 80); });
+  for (const ev of ["fullscreenchange", "webkitfullscreenchange"]) document.addEventListener(ev, () => { root.classList.toggle("is-nfs", (document.fullscreenElement || document.webkitFullscreenElement) === root); resize(); setTimeout(resize, 80); });     // is-nfs: the browser's own full screen, as a class (a rule naming :fullscreen and :-webkit-full-screen together is dropped by a browser that lacks one)
   controls.addEventListener("start", () => { userMoved = true; controls.autoRotate = false; autoBtn?.classList.remove("on"); clearTimeout(idleTimer); tween = null; siteLock = false; takeOver(); });
   controls.addEventListener("end", () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => { }, 6000); });
   stage.addEventListener("pointerdown", (e) => { if (e.target === renderer.domElement && active) closeCard(); });

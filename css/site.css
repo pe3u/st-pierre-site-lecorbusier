@@ -173,10 +173,10 @@ footer .wrap { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--gut
 .v3-card p { color: var(--ink2, #444); }
 .v3-line line { opacity: .5; } .v3-line circle { opacity: .6; }
 /* full-window mode (iOS has no element fullscreen) and native fullscreen of the whole viewer */
-.v3:fullscreen, .v3:-webkit-full-screen { background: #fff; display: flex; flex-direction: column; padding: 0 10px; overflow: auto; }
+.v3.is-nfs { background: #fff; display: flex; flex-direction: column; padding: 0 10px; overflow: auto; }
 .v3.is-fs { position: fixed; inset: 0; z-index: 2000; background: #fff; display: flex; flex-direction: column; padding: env(safe-area-inset-top, 0) 10px env(safe-area-inset-bottom, 0); overflow: auto; }
-.v3.is-fs .v3-stage, .v3:fullscreen .v3-stage, .v3:-webkit-full-screen .v3-stage { flex: 1 1 auto; max-height: none; aspect-ratio: auto; min-height: 0; height: auto; }
-.v3.is-fs .v3-foot, .v3:fullscreen .v3-foot { display: none; }
+.v3.is-fs .v3-stage, .v3.is-nfs .v3-stage { flex: 1 1 auto; max-height: none; aspect-ratio: auto; min-height: 0; height: auto; }
+.v3.is-fs .v3-foot, .v3.is-nfs .v3-foot { display: none; }
 html.v3-lock, html.v3-lock body { overflow: hidden; }
 
 /* the viewer has no frame; its background follows the time of day (white by day, dark at night) */
@@ -462,10 +462,10 @@ footer .addr { margin-top: 0; }
 }
 /* phone turned to landscape: the viewer fills the screen, view on the left, the take-over column on the right */
 @media (orientation: landscape) and (max-height: 540px) {
-  .v3.is-fs, .v3:fullscreen, .v3:-webkit-full-screen { display: grid !important; grid-template-columns: minmax(0, 1fr) 132px; gap: 0 8px; align-items: stretch; padding: 0 8px 0 0; overflow: hidden; background: var(--v3-bg, #fff); }
-  .v3.is-fs.is-play:not(.was-take), .v3.is-play:not(.was-take):fullscreen { grid-template-columns: minmax(0, 1fr) !important; padding: 0; }
-  .v3.is-fs .v3-stage, .v3:fullscreen .v3-stage, .v3:-webkit-full-screen .v3-stage { height: 100vh; height: 100svh; }
-  .v3.is-fs .v3-panel, .v3:fullscreen .v3-panel { max-height: 100svh; padding-top: 8px; }
+  .v3.is-fs, .v3.is-nfs { display: grid !important; grid-template-columns: minmax(0, 1fr) 132px; gap: 0 8px; align-items: stretch; padding: 0 8px 0 0; overflow: hidden; background: var(--v3-bg, #fff); }
+  .v3.is-fs.is-play:not(.was-take), .v3.is-play:not(.was-take).is-nfs { grid-template-columns: minmax(0, 1fr) !important; padding: 0; }
+  .v3.is-fs .v3-stage, .v3.is-nfs .v3-stage { height: 100vh; height: 100svh; }
+  .v3.is-fs .v3-panel, .v3.is-nfs .v3-panel { max-height: 100svh; padding-top: 8px; }
 }
 /* previous / next carry the scene names: allow two short lines */
 .v3-bar [data-act="prev"] span, .v3-bar [data-act="next"] span { white-space: normal; text-align: center; line-height: 1.15; max-width: 9em; }
@@ -484,7 +484,7 @@ footer .addr { margin-top: 0; }
 @media (max-width: 900px) { .v3-explore { right: 10px; top: 10px; width: 74px; height: 64px; font-size: 12px; } }
 
 /* every screen: the viewer (3D view, and the controls when they show) fits the window under the header; the height is set by viewer3d.js */
-.v3:not(.is-fs):not(:fullscreen) .v3-stage { height: var(--v3h, 70vh) !important; min-height: 0 !important; max-height: none !important; aspect-ratio: auto !important; }
+.v3:not(.is-fs):not(.is-nfs) .v3-stage { height: var(--v3h, 70vh) !important; min-height: 0 !important; max-height: none !important; aspect-ratio: auto !important; }
 
 /* the instructions sit at the top right (in take-over; in auto play the Tap to explore button is there), the figures under them */
 .v3-help { position: absolute; right: 18px; top: 16px; z-index: 5; text-align: right; pointer-events: none; }
@@ -614,8 +614,8 @@ h1 { cursor: pointer; }
 }
 /* big screens in full screen: the view fills the whole screen, the controls float over its bottom edge */
 @media (min-width: 901px) {
-  .v3.is-fs, .v3:fullscreen, .v3:-webkit-full-screen { display: block; width: 100vw; height: 100vh; padding: 0; overflow: hidden; }
-  .v3.is-fs .v3-stage, .v3:fullscreen .v3-stage, .v3:-webkit-full-screen .v3-stage { position: absolute; inset: 0; width: 100%; height: 100% !important; max-height: none; min-height: 0; aspect-ratio: auto; }
-  .v3.is-fs .v3-panel, .v3:fullscreen .v3-panel, .v3:-webkit-full-screen .v3-panel { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 8; width: max-content; max-width: calc(100% - 24px); justify-content: center; padding: 8px 14px; border-radius: 14px; background: rgba(255,255,255,.88); box-shadow: 0 4px 18px rgba(20,20,20,.08); }
-  .v3.is-fs .v3-txt, .v3:fullscreen .v3-txt, .v3:-webkit-full-screen .v3-txt { bottom: 164px; }          /* the caption above the controls */
+  .v3.is-fs, .v3.is-nfs { display: block; width: 100vw; height: 100vh; padding: 0; overflow: hidden; }
+  .v3.is-fs .v3-stage, .v3.is-nfs .v3-stage { position: absolute; inset: 0; width: 100%; height: 100% !important; max-height: none; min-height: 0; aspect-ratio: auto; }
+  .v3.is-fs .v3-panel, .v3.is-nfs .v3-panel { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 8; width: max-content; max-width: calc(100% - 24px); justify-content: center; padding: 8px 14px; border-radius: 14px; background: rgba(255,255,255,.88); box-shadow: 0 4px 18px rgba(20,20,20,.08); }
+  .v3.is-fs .v3-txt, .v3.is-nfs .v3-txt { bottom: 164px; }          /* the caption above the controls */
 }

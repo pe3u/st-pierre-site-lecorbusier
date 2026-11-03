@@ -82,7 +82,9 @@ export async function createViewer(root, opts) {
 
   // ---- section plane (global clipping: it also cuts the shadow maps and the occlusion pass)
   const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 80);
-  const setCut = (on) => { renderer.clippingPlanes = on ? [cutPlane] : []; };
+  const noCut = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e6);           // off: a plane far above that clips nothing; the number of planes never changes, so no shader is rebuilt when a cut comes in
+  const setCut = (on) => { renderer.clippingPlanes = [on ? cutPlane : noCut]; };
+  setCut(false);
 
   // ---- light: sun + sky + a little image-based light for the glass
   const sun = new THREE.DirectionalLight(0xfff0dc, 4.5);
@@ -757,6 +759,9 @@ vAlong = -position.y / ${len.toFixed(2)}; vNv = normalize(normalMatrix * normal)
   });
   const ghostPass = new RenderPass(ghostScene, persp); ghostPass.clear = false;          // the ghost goes into the scene buffer, tested against its depth (the ground hides what is buried)
   { const base = ghostPass.render.bind(ghostPass); ghostPass.render = (r, ...a) => { if (cutK <= 0.001) return; ghostSetup(); const cp = r.clippingPlanes; r.clippingPlanes = [ghostPlane, ghostFloor]; base(r, ...a); r.clippingPlanes = cp; }; }
+  { const rt = lite ? null : new THREE.WebGLRenderTarget(4, 4), cp = renderer.clippingPlanes;            // the ghost's shaders are built now, while loading, not when the first cut comes in
+    renderer.setRenderTarget(rt); renderer.clippingPlanes = [ghostPlane, ghostFloor]; renderer.render(ghostScene, persp);
+    renderer.clippingPlanes = cp; renderer.setRenderTarget(null); rt?.dispose(); }
   composer.addPass(renderPass); composer.addPass(ghostPass); composer.addPass(gtao); composer.addPass(finalPass); if (!lite) composer.addPass(new SMAAPass(1, 1));   // SMAA steadies thin lines and small details while the model moves
   gtao.enabled = !mobile;                                // the occlusion pass is the heaviest and the least stable on phones
   const clip = { on: { value: 0 } };

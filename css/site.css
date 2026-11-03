@@ -612,3 +612,10 @@ h1 { cursor: pointer; }
   .v3-views button:hover { background: #e9e9e4; color: var(--ink); }
   .v3-views button.on { background: var(--ink); color: #fff; }
 }
+/* big screens in full screen: the view fills the whole screen, the controls float over its bottom edge */
+@media (min-width: 901px) {
+  .v3.is-fs, .v3:fullscreen, .v3:-webkit-full-screen { display: block; width: 100vw; height: 100vh; padding: 0; overflow: hidden; }
+  .v3.is-fs .v3-stage, .v3:fullscreen .v3-stage, .v3:-webkit-full-screen .v3-stage { position: absolute; inset: 0; width: 100%; height: 100% !important; max-height: none; min-height: 0; aspect-ratio: auto; }
+  .v3.is-fs .v3-panel, .v3:fullscreen .v3-panel, .v3:-webkit-full-screen .v3-panel { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 8; width: max-content; max-width: calc(100% - 24px); justify-content: center; padding: 8px 14px; border-radius: 14px; background: rgba(255,255,255,.88); box-shadow: 0 4px 18px rgba(20,20,20,.08); }
+  .v3.is-fs .v3-txt, .v3:fullscreen .v3-txt, .v3:-webkit-full-screen .v3-txt { bottom: 164px; }          /* the caption above the controls */
+}
